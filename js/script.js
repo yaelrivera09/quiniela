@@ -214,18 +214,23 @@ function buildMatchCard(m) {
   const card = document.createElement("div");
   card.className = "match-card" + (isLive ? " is-live" : "");
   card.innerHTML = `
-    <div class="match-teams">
-      ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
-      <span>${m.homeTeam.name}</span>
-    </div>
-    <div class="match-score">${hasScore ? `${home} - ${away}` : "vs"}</div>
-    <div class="match-teams away">
-      <span>${m.awayTeam.name}</span>
-      ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
-    </div>
-    <div class="match-meta">
+    <div class="match-header">
       <span class="match-time">${formatTime(m.utcDate)}</span>
       <span class="match-status ${statusClass(m.status)}">${STATUS_LABELS[m.status] || m.status}</span>
+    </div>
+    <div class="match-row">
+      <div class="match-team">
+        ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
+        <span>${m.homeTeam.name}</span>
+      </div>
+      <span class="match-row-score">${hasScore ? home : "-"}</span>
+    </div>
+    <div class="match-row">
+      <div class="match-team">
+        ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
+        <span>${m.awayTeam.name}</span>
+      </div>
+      <span class="match-row-score">${hasScore ? away : "-"}</span>
     </div>
   `;
   return card;
@@ -303,17 +308,25 @@ function openPersonModal(person) {
     const hasScore = home != null && away != null;
     const isLive = m.status === "IN_PLAY" || m.status === "PAUSED";
 
-    return `<div class="modal-match-row">
-      <div class="modal-match-teams">
-        ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
-        <span>${m.homeTeam.name}</span>
+    return `<div class="modal-match">
+      <div class="modal-match-header">
+        <span>${formatDate(m.utcDate)}</span>
+        <span class="match-status ${statusClass(m.status)}">${isLive ? "EN VIVO" : STATUS_LABELS[m.status] || m.status}</span>
       </div>
-      <span>${hasScore ? `${home} - ${away}` : formatDate(m.utcDate)}</span>
-      <div class="modal-match-teams">
-        <span>${m.awayTeam.name}</span>
-        ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
+      <div class="match-row">
+        <div class="match-team">
+          ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
+          <span>${m.homeTeam.name}</span>
+        </div>
+        <span class="match-row-score">${hasScore ? home : "-"}</span>
       </div>
-      <span class="match-status ${statusClass(m.status)}">${isLive ? "EN VIVO" : STATUS_LABELS[m.status] || m.status}</span>
+      <div class="match-row">
+        <div class="match-team">
+          ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
+          <span>${m.awayTeam.name}</span>
+        </div>
+        <span class="match-row-score">${hasScore ? away : "-"}</span>
+      </div>
     </div>`;
   };
 
