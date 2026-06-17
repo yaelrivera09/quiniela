@@ -357,10 +357,12 @@ function openPersonModal(person) {
     const away = m.score?.fullTime?.away ?? m.score?.halfTime?.away;
     const hasScore = home != null && away != null;
     const isLive = m.status === "IN_PLAY" || m.status === "PAUSED";
+    const isHome = teamNames.includes(m.homeTeam.name);
+    const rivalTeamName = isHome ? m.awayTeam.name : m.homeTeam.name;
+    const rivalOwner = ownerFor(rivalTeamName);
 
     let resultClass = "";
     if (m.status === "FINISHED" && hasScore) {
-      const isHome = teamNames.includes(m.homeTeam.name);
       const ownScore = isHome ? home : away;
       const rivalScore = isHome ? away : home;
       resultClass = ownScore > rivalScore ? "result-win" : ownScore < rivalScore ? "result-loss" : "result-draw";
@@ -388,8 +390,8 @@ function openPersonModal(person) {
         <span class="match-row-score">${hasScore ? away : "-"}</span>
       </div>
       ${
-        m.status !== "FINISHED"
-          ? `<button class="bet-btn bet-trigger" data-target="${person.name}" data-context="${esNameFor(m.homeTeam.name)} vs ${esNameFor(m.awayTeam.name)} - ${formatTime(m.utcDate)}">🎲 Apostarle a ${person.name} en este partido</button>`
+        m.status !== "FINISHED" && rivalOwner && rivalOwner.name !== person.name
+          ? `<button class="bet-btn bet-trigger" data-target="${rivalOwner.name}" data-context="${esNameFor(m.homeTeam.name)} vs ${esNameFor(m.awayTeam.name)} - ${formatTime(m.utcDate)}">🎲 Apostarle a ${rivalOwner.name} en este partido</button>`
           : ""
       }
     </div>`;
