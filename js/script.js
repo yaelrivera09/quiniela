@@ -43,19 +43,29 @@ function renderPeople() {
     ).length;
     const champion = person.teams.some((t) => teamStatus[t.en] && teamStatus[t.en].winner);
 
+    const heartsHtml = person.teams
+      .map((t) => {
+        const broken = teamStatus[t.en] && teamStatus[t.en].eliminated;
+        return `<span class="heart ${broken ? "broken" : ""}">♥</span>`;
+      })
+      .join("");
+
     card.innerHTML = `
       <div class="person-header">
         <img class="person-photo" src="images/${person.photo}" alt="${person.name}"
              onerror="this.outerHTML='<div class=\\'person-photo-fallback\\'>${initials(person.name)}</div>'" />
         <div>
           <div class="person-name">${person.name}</div>
-          <div class="person-status">${
-            champion
-              ? "🏆 ¡Tiene al campeón!"
-              : stillIn > 0
-              ? `${stillIn} de ${person.teams.length} equipos con vida`
-              : "Sin equipos vivos"
-          }</div>
+          <div class="person-status-row">
+            <span class="person-status">${
+              champion
+                ? "🏆 ¡Tiene al campeón!"
+                : stillIn > 0
+                ? `${stillIn} de ${person.teams.length} equipos con vida`
+                : "Sin equipos vivos"
+            }</span>
+            <span class="hearts">${heartsHtml}</span>
+          </div>
         </div>
       </div>
       <div class="team-list">

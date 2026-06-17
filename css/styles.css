@@ -156,10 +156,43 @@ main {
   font-weight: 700;
 }
 
+.person-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 1px;
+}
+
 .person-status {
   font-size: 0.74rem;
   color: var(--muted);
-  margin-top: 1px;
+}
+
+.hearts {
+  display: flex;
+  gap: 2px;
+}
+
+.heart {
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--green);
+  position: relative;
+}
+
+.heart.broken {
+  color: #c7c9cd;
+}
+
+.heart.broken::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -8%;
+  width: 2px;
+  height: 116%;
+  background: var(--card);
+  transform: translateX(-50%) rotate(18deg);
 }
 
 .team-list {
