@@ -541,6 +541,128 @@ body.modal-open {
   padding: 10px 0;
 }
 
+/* ---- Apostar ---- */
+.bet-btn {
+  margin-top: 10px;
+  width: 100%;
+  background: var(--accent-soft);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.bet-btn:hover { background: #e3e6eb; }
+
+.match-card .bet-btn { margin-top: 10px; }
+
+.modal-box-sm { max-width: 380px; }
+
+.bet-modal-context {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 16px;
+}
+
+.bet-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+
+.bet-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-bottom: 16px;
+  font-family: inherit;
+}
+
+.bet-input:focus { outline: 2px solid var(--ink); }
+
+.bet-send-btn {
+  width: 100%;
+  background: #25d366;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.bet-send-btn:hover { background: #1ebd58; }
+
+/* ---- Pestaña Apuestas ---- */
+.bets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bet-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bet-card-info { min-width: 0; }
+
+.bet-card-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  margin-bottom: 2px;
+}
+
+.bet-card-context {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.bet-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.bet-status {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.bet-status.pendiente { background: #fff8e6; color: #6a5200; }
+.bet-status.aceptada { background: var(--green-soft); color: var(--green); }
+
+.bet-accept-btn {
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 600px) {
   .hero { padding: 36px 16px 18px; }
@@ -557,4 +679,7 @@ body.modal-open {
 
   .modal-box { max-height: 68vh; }
   .modal-scroll { padding: 18px; max-height: 68vh; }
+
+  .bet-card { flex-direction: column; align-items: flex-start; }
+  .bet-card-meta { width: 100%; justify-content: space-between; }
 }

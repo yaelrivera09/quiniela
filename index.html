@@ -17,6 +17,7 @@
     <button class="tab-btn active" data-tab="participantes">Participantes</button>
     <button class="tab-btn" data-tab="grupos">Tabla de grupos</button>
     <button class="tab-btn" data-tab="partidos">Partidos de hoy</button>
+    <button class="tab-btn" data-tab="apuestas">Apuestas</button>
   </nav>
 
   <main>
@@ -38,6 +39,14 @@
       <div id="matches-empty" class="matches-empty hidden">No hay partidos programados para hoy.</div>
       <div id="matches-list" class="matches-list"></div>
     </section>
+
+    <section id="apuestas" class="tab-panel">
+      <div id="bets-warning" class="api-warning hidden">
+        No se pudo conectar con la base de datos de apuestas. Verifica que Upstash Redis esté conectado en Vercel.
+      </div>
+      <div id="bets-empty" class="matches-empty hidden">Aún no hay apuestas. ¡Anímate a retar a alguien!</div>
+      <div id="bets-list" class="bets-list"></div>
+    </section>
   </main>
 
   <footer>
@@ -49,6 +58,19 @@
       <button id="modal-close" class="modal-close" aria-label="Cerrar">✕</button>
       <div class="modal-scroll">
         <div id="modal-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bet-modal" class="modal-overlay hidden">
+    <div class="modal-box modal-box-sm">
+      <button id="bet-modal-close" class="modal-close" aria-label="Cerrar">✕</button>
+      <div class="modal-scroll">
+        <h2 id="bet-modal-title">Apostar</h2>
+        <p id="bet-modal-context" class="bet-modal-context"></p>
+        <label class="bet-label" for="bet-amount">Monto de la apuesta (MXN)</label>
+        <input id="bet-amount" type="number" min="1" step="1" placeholder="Ej. 100" class="bet-input" />
+        <button id="bet-send" class="bet-send-btn">Enviar apuesta por WhatsApp</button>
       </div>
     </div>
   </div>

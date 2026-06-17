@@ -33,3 +33,11 @@ git push -u origin main
 - Si no configuras la API key, la web sigue funcionando (participantes y sus equipos se ven bien), solo no se cargan grupos/partidos en vivo y aparece un aviso.
 - Los partidos se refrescan cada 30s y los grupos cada 2 min mientras la pestaña está abierta.
 - Un equipo se marca en rojo ("Eliminado") automáticamente cuando pierde un partido de eliminación directa (octavos, cuartos, semis, final).
+
+## 4. Apuestas (requiere Upstash Redis)
+La pestaña "Apuestas" guarda su estado en una base de datos Redis gratuita:
+1. En Vercel: proyecto → **Storage** → **Create Database** → elige **Upstash for Redis** (plan gratis) → conéctala al proyecto.
+2. Vercel agrega solas las variables `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN`.
+3. Endpoints: `api/bets/create.js`, `api/bets/list.js`, `api/bets/accept.js` (usan `api/_redis.js`).
+4. Cada persona tiene un campo `phone` en `data/people.js` (formato `+52XXXXXXXXXX`) usado para abrir WhatsApp 1 a 1 (`wa.me`) con el mensaje de la apuesta ya redactado.
+5. Sin la base conectada, los botones de apostar igual abren WhatsApp, pero la apuesta no queda guardada ni aparece en la pestaña "Apuestas".

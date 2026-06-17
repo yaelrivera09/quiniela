@@ -7,6 +7,7 @@ const PEOPLE = [
   {
     name: "Natalia",
     photo: "Natalia.jpeg",
+    phone: "+527731513525",
     teams: [
       { es: "Arabia Saudita", flag: "sa", en: "Saudi Arabia" },
       { es: "Austria", flag: "at", en: "Austria" },
@@ -17,6 +18,7 @@ const PEOPLE = [
   {
     name: "Ana",
     photo: "Ana.jpeg",
+    phone: "+525531948159",
     teams: [
       { es: "Haití", flag: "ht", en: "Haiti" },
       { es: "Panamá", flag: "pa", en: "Panama" },
@@ -27,6 +29,7 @@ const PEOPLE = [
   {
     name: "Karen",
     photo: "Karen.jpeg",
+    phone: "+525614371267",
     teams: [
       { es: "Cabo Verde", flag: "cv", en: "Cape Verde Islands" },
       { es: "Canadá", flag: "ca", en: "Canada" },
@@ -37,6 +40,7 @@ const PEOPLE = [
   {
     name: "Alfredo",
     photo: "Alfredo.jpeg",
+    phone: "+525635420647",
     teams: [
       { es: "Nueva Zelanda", flag: "nz", en: "New Zealand" },
       { es: "Costa de Marfil", flag: "ci", en: "Ivory Coast" },
@@ -47,6 +51,7 @@ const PEOPLE = [
   {
     name: "Noé",
     photo: "Noe.jpeg",
+    phone: "+525582122757",
     teams: [
       { es: "Ghana", flag: "gh", en: "Ghana" },
       { es: "Irán", flag: "ir", en: "Iran" },
@@ -57,6 +62,7 @@ const PEOPLE = [
   {
     name: "Alejandra",
     photo: "Alejandra.jpeg",
+    phone: "+527731437890",
     teams: [
       { es: "Iraq", flag: "iq", en: "Iraq" },
       { es: "Escocia", flag: "gb-sct", en: "Scotland" },
@@ -67,6 +73,7 @@ const PEOPLE = [
   {
     name: "Oscar",
     photo: "Oscar.jpeg",
+    phone: "+522204908719",
     teams: [
       { es: "Curazao", flag: "cw", en: "Curaçao" },
       { es: "Túnez", flag: "tn", en: "Tunisia" },
@@ -77,6 +84,7 @@ const PEOPLE = [
   {
     name: "Jonathan",
     photo: "Jonathan.jpeg",
+    phone: "+525519116338",
     teams: [
       { es: "Uzbekistán", flag: "uz", en: "Uzbekistan" },
       { es: "Paraguay", flag: "py", en: "Paraguay" },
@@ -87,6 +95,7 @@ const PEOPLE = [
   {
     name: "Fanny",
     photo: "Fanny.jpeg",
+    phone: "+522941405576",
     teams: [
       { es: "Bosnia y Herzegovina", flag: "ba", en: "Bosnia-Herzegovina" },
       { es: "Congo", flag: "cd", en: "Congo DR" },
@@ -97,6 +106,7 @@ const PEOPLE = [
   {
     name: "Ricardo",
     photo: "Ricardo.jpeg",
+    phone: "+527731244523",
     teams: [
       { es: "Qatar", flag: "qa", en: "Qatar" },
       { es: "Australia", flag: "au", en: "Australia" },
@@ -107,6 +117,7 @@ const PEOPLE = [
   {
     name: "Misuai",
     photo: "Misuai.jpeg",
+    phone: "+525610145154",
     teams: [
       { es: "Sudáfrica", flag: "za", en: "South Africa" },
       { es: "República Checa", flag: "cz", en: "Czechia" },
@@ -117,6 +128,7 @@ const PEOPLE = [
   {
     name: "Yael",
     photo: "Yael.jpeg",
+    phone: "+525667530599",
     teams: [
       { es: "Jordania", flag: "jo", en: "Jordan" },
       { es: "Argelia", flag: "dz", en: "Algeria" },
