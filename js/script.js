@@ -142,7 +142,7 @@ function renderGroups(standings) {
           <td>${row.position}</td>
           <td class="team-cell">
             ${flag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${flag}.png" alt="" />` : ""}
-            ${row.team.name}
+            ${esNameFor(row.team.name)}
           </td>
           <td>${row.playedGames}</td>
           <td>${row.won}</td>
