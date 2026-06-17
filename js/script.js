@@ -107,7 +107,8 @@ function renderGroups(standings) {
   groupStandings.sort((a, b) => a.group.localeCompare(b.group));
 
   groupStandings.forEach((group) => {
-    const groupLetter = group.group.replace("GROUP_", "Grupo ");
+    const letter = group.group.replace(/^GROUP_/, "").replace(/^Group\s*/i, "");
+    const groupLetter = `Grupo ${letter}`;
     const card = document.createElement("div");
     card.className = "group-card";
 
