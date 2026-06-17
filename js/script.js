@@ -2,6 +2,7 @@
 // status: { eliminated: bool, winner: bool, group: string }
 let teamStatus = {};
 let liveMatchesCount = 0;
+let allMatches = [];
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -35,6 +36,7 @@ function renderPeople() {
   PEOPLE.forEach((person) => {
     const card = document.createElement("div");
     card.className = "person-card";
+    card.addEventListener("click", () => openPersonModal(person));
 
     const stillIn = person.teams.filter(
       (t) => !(teamStatus[t.en] && teamStatus[t.en].eliminated)
@@ -162,8 +164,9 @@ async function loadMatches() {
       return;
     }
     $("#matches-warning").classList.add("hidden");
-    renderMatches(data.matches);
-    applyMatchResultsToTeamStatus(data.matches);
+    allMatches = data.matches;
+    renderMatches(allMatches);
+    applyMatchResultsToTeamStatus(allMatches);
   } catch (e) {
     $("#matches-warning").classList.remove("hidden");
   }
@@ -180,40 +183,73 @@ const STATUS_LABELS = {
   CANCELLED: "Cancelado",
 };
 
+function isToday(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
+function formatTime(dateStr) {
+  return new Date(dateStr).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+}
+
+function statusClass(status) {
+  if (status === "IN_PLAY" || status === "PAUSED") return "live";
+  if (status === "FINISHED") return "finished";
+  return "";
+}
+
+function buildMatchCard(m) {
+  const isLive = m.status === "IN_PLAY" || m.status === "PAUSED";
+  const homeFlag = flagFor(m.homeTeam.name);
+  const awayFlag = flagFor(m.awayTeam.name);
+  const home = m.score?.fullTime?.home ?? m.score?.halfTime?.home;
+  const away = m.score?.fullTime?.away ?? m.score?.halfTime?.away;
+  const hasScore = home != null && away != null;
+
+  const card = document.createElement("div");
+  card.className = "match-card" + (isLive ? " is-live" : "");
+  card.innerHTML = `
+    <div class="match-teams">
+      ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
+      <span>${m.homeTeam.name}</span>
+    </div>
+    <div class="match-score">${hasScore ? `${home} - ${away}` : "vs"}</div>
+    <div class="match-teams away">
+      <span>${m.awayTeam.name}</span>
+      ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
+    </div>
+    <div class="match-meta">
+      <span class="match-time">${formatTime(m.utcDate)}</span>
+      <span class="match-status ${statusClass(m.status)}">${STATUS_LABELS[m.status] || m.status}</span>
+    </div>
+  `;
+  return card;
+}
+
 function renderMatches(matches) {
   const list = $("#matches-list");
+  const empty = $("#matches-empty");
   list.innerHTML = "";
 
   liveMatchesCount = matches.filter((m) => m.status === "IN_PLAY" || m.status === "PAUSED").length;
   updateLiveBanner();
 
-  // Ordena: en vivo primero, luego próximos, luego finalizados
-  const order = { IN_PLAY: 0, PAUSED: 0, TIMED: 1, SCHEDULED: 1, FINISHED: 2 };
-  const sorted = [...matches].sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3));
+  const todays = matches
+    .filter((m) => isToday(m.utcDate))
+    .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
 
-  sorted.slice(0, 40).forEach((m) => {
-    const isLive = m.status === "IN_PLAY" || m.status === "PAUSED";
-    const homeFlag = flagFor(m.homeTeam.name);
-    const awayFlag = flagFor(m.awayTeam.name);
-    const home = m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? "-";
-    const away = m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? "-";
+  if (todays.length === 0) {
+    empty.classList.remove("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
 
-    const card = document.createElement("div");
-    card.className = "match-card" + (isLive ? " is-live" : "");
-    card.innerHTML = `
-      <div class="match-teams">
-        ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
-        <span>${m.homeTeam.name}</span>
-      </div>
-      <div class="match-score">${home} - ${away}</div>
-      <div class="match-teams">
-        <span>${m.awayTeam.name}</span>
-        ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
-      </div>
-      <div class="match-status ${isLive ? "live" : ""}">${STATUS_LABELS[m.status] || m.status}</div>
-    `;
-    list.appendChild(card);
-  });
+  todays.forEach((m) => list.appendChild(buildMatchCard(m)));
 }
 
 function applyMatchResultsToTeamStatus(matches) {
@@ -245,6 +281,67 @@ function applyMatchResultsToTeamStatus(matches) {
   renderPeople();
 }
 
+/* ---------- Modal de participante ---------- */
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+}
+
+function openPersonModal(person) {
+  const teamNames = person.teams.map((t) => t.en);
+  const personMatches = allMatches
+    .filter((m) => teamNames.includes(m.homeTeam.name) || teamNames.includes(m.awayTeam.name))
+    .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+
+  const played = personMatches.filter((m) => m.status === "FINISHED");
+  const upcoming = personMatches.filter((m) => m.status !== "FINISHED");
+
+  const rowHtml = (m) => {
+    const homeFlag = flagFor(m.homeTeam.name);
+    const awayFlag = flagFor(m.awayTeam.name);
+    const home = m.score?.fullTime?.home ?? m.score?.halfTime?.home;
+    const away = m.score?.fullTime?.away ?? m.score?.halfTime?.away;
+    const hasScore = home != null && away != null;
+    const isLive = m.status === "IN_PLAY" || m.status === "PAUSED";
+
+    return `<div class="modal-match-row">
+      <div class="modal-match-teams">
+        ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
+        <span>${m.homeTeam.name}</span>
+      </div>
+      <span>${hasScore ? `${home} - ${away}` : formatDate(m.utcDate)}</span>
+      <div class="modal-match-teams">
+        <span>${m.awayTeam.name}</span>
+        ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
+      </div>
+      <span class="match-status ${statusClass(m.status)}">${isLive ? "EN VIVO" : STATUS_LABELS[m.status] || m.status}</span>
+    </div>`;
+  };
+
+  $("#modal-content").innerHTML = `
+    <h2>${person.name}</h2>
+    <div class="modal-section-title">Jugados</div>
+    ${played.length ? played.map(rowHtml).join("") : '<div class="modal-empty">Aún no hay partidos jugados.</div>'}
+    <div class="modal-section-title">Por jugar</div>
+    ${upcoming.length ? upcoming.map(rowHtml).join("") : '<div class="modal-empty">No hay partidos pendientes.</div>'}
+  `;
+
+  $("#person-modal").classList.remove("hidden");
+}
+
+function closePersonModal() {
+  $("#person-modal").classList.add("hidden");
+}
+
+function initModal() {
+  $("#modal-close").addEventListener("click", closePersonModal);
+  $("#person-modal").addEventListener("click", (e) => {
+    if (e.target.id === "person-modal") closePersonModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closePersonModal();
+  });
+}
+
 function updateLiveBanner() {
   const banner = $("#live-banner");
   if (liveMatchesCount > 0) {
@@ -258,6 +355,7 @@ function updateLiveBanner() {
 /* ---------- Init ---------- */
 function init() {
   initTabs();
+  initModal();
   renderPeople();
   loadStandings();
   loadMatches();

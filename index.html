@@ -8,15 +8,15 @@
 </head>
 <body>
   <header class="hero">
-    <h1>⚽ Quiniela Familiar</h1>
-    <p class="subtitle">Mundial 2026 — ¡que gane el mejor!</p>
+    <h1>Quiniela Familiar</h1>
+    <p class="subtitle">Mundial 2026</p>
     <div id="live-banner" class="live-banner hidden"></div>
   </header>
 
   <nav class="tabs">
     <button class="tab-btn active" data-tab="participantes">Participantes</button>
     <button class="tab-btn" data-tab="grupos">Tabla de grupos</button>
-    <button class="tab-btn" data-tab="partidos">Partidos</button>
+    <button class="tab-btn" data-tab="partidos">Partidos de hoy</button>
   </nav>
 
   <main>
@@ -35,13 +35,21 @@
       <div id="matches-warning" class="api-warning hidden">
         No se pudieron cargar los partidos en vivo. Configura <code>FOOTBALL_DATA_API_KEY</code> en Vercel.
       </div>
+      <div id="matches-empty" class="matches-empty hidden">No hay partidos programados para hoy.</div>
       <div id="matches-list" class="matches-list"></div>
     </section>
   </main>
 
   <footer>
-    <p>Hecho con ❤️ para la familia · Datos en vivo vía football-data.org</p>
+    <p>Datos en vivo vía football-data.org</p>
   </footer>
+
+  <div id="person-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <button id="modal-close" class="modal-close" aria-label="Cerrar">✕</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
 
   <script src="data/people.js"></script>
   <script src="js/script.js"></script>
