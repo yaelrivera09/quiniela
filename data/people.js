@@ -6,6 +6,7 @@
 const PEOPLE = [
   {
     name: "Natalia",
+    photo: "Natalia.jpeg",
     teams: [
       { es: "Arabia Saudita", flag: "sa", en: "Saudi Arabia" },
       { es: "Austria", flag: "at", en: "Austria" },
@@ -15,6 +16,7 @@ const PEOPLE = [
   },
   {
     name: "Ana",
+    photo: "Ana.jpeg",
     teams: [
       { es: "Haití", flag: "ht", en: "Haiti" },
       { es: "Panamá", flag: "pa", en: "Panama" },
@@ -24,6 +26,7 @@ const PEOPLE = [
   },
   {
     name: "Karen",
+    photo: "Karen.jpeg",
     teams: [
       { es: "Cabo Verde", flag: "cv", en: "Cape Verde" },
       { es: "Canadá", flag: "ca", en: "Canada" },
@@ -33,6 +36,7 @@ const PEOPLE = [
   },
   {
     name: "Alfredo",
+    photo: "Alfredo.jpeg",
     teams: [
       { es: "Nueva Zelanda", flag: "nz", en: "New Zealand" },
       { es: "Costa de Marfil", flag: "ci", en: "Ivory Coast" },
@@ -42,6 +46,7 @@ const PEOPLE = [
   },
   {
     name: "Noé",
+    photo: "Noe.jpeg",
     teams: [
       { es: "Ghana", flag: "gh", en: "Ghana" },
       { es: "Irán", flag: "ir", en: "Iran" },
@@ -51,6 +56,7 @@ const PEOPLE = [
   },
   {
     name: "Alejandra",
+    photo: "Alejandra.jpeg",
     teams: [
       { es: "Iraq", flag: "iq", en: "Iraq" },
       { es: "Escocia", flag: "gb-sct", en: "Scotland" },
@@ -60,6 +66,7 @@ const PEOPLE = [
   },
   {
     name: "Oscar",
+    photo: "Oscar.jpeg",
     teams: [
       { es: "Curazao", flag: "cw", en: "Curacao" },
       { es: "Túnez", flag: "tn", en: "Tunisia" },
@@ -69,6 +76,7 @@ const PEOPLE = [
   },
   {
     name: "Jonathan",
+    photo: "Jonathan.jpeg",
     teams: [
       { es: "Uzbekistán", flag: "uz", en: "Uzbekistan" },
       { es: "Paraguay", flag: "py", en: "Paraguay" },
@@ -78,6 +86,7 @@ const PEOPLE = [
   },
   {
     name: "Fanny",
+    photo: "Fanny.jpeg",
     teams: [
       { es: "Bosnia y Herzegovina", flag: "ba", en: "Bosnia and Herzegovina" },
       { es: "Congo", flag: "cd", en: "DR Congo" },
@@ -87,6 +96,7 @@ const PEOPLE = [
   },
   {
     name: "Ricardo",
+    photo: "Ricardo.jpeg",
     teams: [
       { es: "Qatar", flag: "qa", en: "Qatar" },
       { es: "Australia", flag: "au", en: "Australia" },
@@ -96,6 +106,7 @@ const PEOPLE = [
   },
   {
     name: "Misuai",
+    photo: "Misuai.jpeg",
     teams: [
       { es: "Sudáfrica", flag: "za", en: "South Africa" },
       { es: "República Checa", flag: "cz", en: "Czech Republic" },
@@ -105,6 +116,7 @@ const PEOPLE = [
   },
   {
     name: "Yael",
+    photo: "Yael.jpeg",
     teams: [
       { es: "Jordania", flag: "jo", en: "Jordan" },
       { es: "Argelia", flag: "dz", en: "Algeria" },

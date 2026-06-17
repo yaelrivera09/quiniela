@@ -45,7 +45,7 @@ function renderPeople() {
 
     card.innerHTML = `
       <div class="person-header">
-        <img class="person-photo" src="images/${person.name}.jpg" alt="${person.name}"
+        <img class="person-photo" src="images/${person.photo}" alt="${person.name}"
              onerror="this.outerHTML='<div class=\\'person-photo-fallback\\'>${initials(person.name)}</div>'" />
         <div>
           <div class="person-name">${person.name}</div>
@@ -98,6 +98,17 @@ function flagFor(teamName) {
     if (match) return match.flag;
   }
   return null;
+}
+
+function ownerFor(teamName) {
+  return PEOPLE.find((person) => person.teams.some((t) => t.en === teamName)) || null;
+}
+
+function ownerAvatarHtml(teamName) {
+  const owner = ownerFor(teamName);
+  if (!owner) return "";
+  return `<img class="owner-avatar" src="images/${owner.photo}" alt="${owner.name}" title="${owner.name}"
+    onerror="this.outerHTML='<span class=\\'owner-avatar-fallback\\' title=\\'${owner.name}\\'>${initials(owner.name)}</span>'" />`;
 }
 
 function renderGroups(standings) {
@@ -222,6 +233,7 @@ function buildMatchCard(m) {
       <div class="match-team">
         ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
         <span>${m.homeTeam.name}</span>
+        ${ownerAvatarHtml(m.homeTeam.name)}
       </div>
       <span class="match-row-score">${hasScore ? home : "-"}</span>
     </div>
@@ -229,6 +241,7 @@ function buildMatchCard(m) {
       <div class="match-team">
         ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
         <span>${m.awayTeam.name}</span>
+        ${ownerAvatarHtml(m.awayTeam.name)}
       </div>
       <span class="match-row-score">${hasScore ? away : "-"}</span>
     </div>
@@ -317,6 +330,7 @@ function openPersonModal(person) {
         <div class="match-team">
           ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
           <span>${m.homeTeam.name}</span>
+          ${ownerAvatarHtml(m.homeTeam.name)}
         </div>
         <span class="match-row-score">${hasScore ? home : "-"}</span>
       </div>
@@ -324,6 +338,7 @@ function openPersonModal(person) {
         <div class="match-team">
           ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
           <span>${m.awayTeam.name}</span>
+          ${ownerAvatarHtml(m.awayTeam.name)}
         </div>
         <span class="match-row-score">${hasScore ? away : "-"}</span>
       </div>
@@ -339,10 +354,12 @@ function openPersonModal(person) {
   `;
 
   $("#person-modal").classList.remove("hidden");
+  document.body.classList.add("modal-open");
 }
 
 function closePersonModal() {
   $("#person-modal").classList.add("hidden");
+  document.body.classList.remove("modal-open");
 }
 
 function initModal() {
