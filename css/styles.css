@@ -441,9 +441,9 @@ body.modal-open {
 }
 
 .modal-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+  position: fixed;
+  top: max(28px, env(safe-area-inset-top, 0px) + 20px);
+  right: 28px;
   background: var(--accent-soft);
   border: none;
   border-radius: 50%;
@@ -452,8 +452,9 @@ body.modal-open {
   font-size: 1.1rem;
   cursor: pointer;
   color: var(--ink);
-  z-index: 10;
+  z-index: 60;
   touch-action: manipulation;
+  box-shadow: 0 4px 14px rgba(0,0,0,.15);
 }
 
 .modal-content h2 {
