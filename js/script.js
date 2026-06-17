@@ -186,6 +186,7 @@ async function loadMatches() {
     allMatches = data.matches;
     renderMatches(allMatches);
     applyMatchResultsToTeamStatus(allMatches);
+    if (openPerson) openPersonModal(openPerson);
   } catch (e) {
     $("#matches-warning").classList.remove("hidden");
   }
@@ -312,7 +313,10 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
 }
 
+let openPerson = null;
+
 function openPersonModal(person) {
+  openPerson = person;
   const teamNames = person.teams.map((t) => t.en);
   const personMatches = allMatches
     .filter((m) => teamNames.includes(m.homeTeam.name) || teamNames.includes(m.awayTeam.name))
@@ -329,7 +333,15 @@ function openPersonModal(person) {
     const hasScore = home != null && away != null;
     const isLive = m.status === "IN_PLAY" || m.status === "PAUSED";
 
-    return `<div class="modal-match">
+    let resultClass = "";
+    if (m.status === "FINISHED" && hasScore) {
+      const isHome = teamNames.includes(m.homeTeam.name);
+      const ownScore = isHome ? home : away;
+      const rivalScore = isHome ? away : home;
+      resultClass = ownScore > rivalScore ? "result-win" : ownScore < rivalScore ? "result-loss" : "result-draw";
+    }
+
+    return `<div class="modal-match ${resultClass}">
       <div class="modal-match-header">
         <span>${formatDate(m.utcDate)}</span>
         <span class="match-status ${statusClass(m.status)}">${isLive ? "EN VIVO" : STATUS_LABELS[m.status] || m.status}</span>
@@ -366,6 +378,7 @@ function openPersonModal(person) {
 }
 
 function closePersonModal() {
+  openPerson = null;
   $("#person-modal").classList.add("hidden");
   document.body.classList.remove("modal-open");
 }

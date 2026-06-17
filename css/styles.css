@@ -330,6 +330,12 @@ main {
 .match-status.live {
   background: var(--red-soft);
   color: var(--red);
+  animation: live-pulse 1.6s infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 .match-status.finished {
@@ -463,11 +469,21 @@ body.modal-open {
 }
 
 .modal-match {
-  padding: 10px 0;
+  padding: 10px 10px;
+  margin: 0 -10px;
   border-bottom: 1px solid var(--line);
+  border-radius: 8px;
 }
 
 .modal-match:last-child { border-bottom: none; }
+
+.modal-match.result-win { background: var(--green-soft); }
+.modal-match.result-loss { background: var(--red-soft); }
+.modal-match.result-draw { background: #fdf6e3; }
+
+.modal-match.result-win .match-row-score { color: var(--green); }
+.modal-match.result-loss .match-row-score { color: var(--red); }
+.modal-match.result-draw .match-row-score { color: var(--gold); }
 
 .modal-match-header {
   display: flex;
