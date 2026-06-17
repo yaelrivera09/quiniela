@@ -531,6 +531,7 @@ function renderBets(bets) {
       <div class="bet-card-meta">
         <span class="bet-status ${bet.status}">${bet.status === "aceptada" ? "Aceptada" : "Pendiente"}</span>
         ${bet.status === "pendiente" ? `<button class="bet-accept-btn" data-id="${bet.id}">Aceptar</button>` : ""}
+        <button class="bet-delete-btn" data-id="${bet.id}" title="Eliminar">✕</button>
       </div>
     `;
     list.appendChild(card);
@@ -539,6 +540,23 @@ function renderBets(bets) {
   list.querySelectorAll(".bet-accept-btn").forEach((btn) => {
     btn.addEventListener("click", () => acceptBet(btn.dataset.id));
   });
+  list.querySelectorAll(".bet-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", () => deleteBet(btn.dataset.id));
+  });
+}
+
+async function deleteBet(id) {
+  if (!confirm("¿Eliminar esta apuesta?")) return;
+  try {
+    await fetch("/api/bets/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    loadBets();
+  } catch (e) {
+    alert("No se pudo eliminar la apuesta.");
+  }
 }
 
 async function acceptBet(id) {

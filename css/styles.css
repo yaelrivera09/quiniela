@@ -663,6 +663,20 @@ body.modal-open {
   white-space: nowrap;
 }
 
+.bet-delete-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.bet-delete-btn:hover { color: var(--red); border-color: var(--red); }
+
 /* ---- Responsive ---- */
 @media (max-width: 600px) {
   .hero { padding: 36px 16px 18px; }
