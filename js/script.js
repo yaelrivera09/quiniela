@@ -104,6 +104,14 @@ function ownerFor(teamName) {
   return PEOPLE.find((person) => person.teams.some((t) => t.en === teamName)) || null;
 }
 
+function esNameFor(teamName) {
+  for (const person of PEOPLE) {
+    const match = person.teams.find((t) => t.en === teamName);
+    if (match) return match.es;
+  }
+  return teamName;
+}
+
 function ownerAvatarHtml(teamName) {
   const owner = ownerFor(teamName);
   if (!owner) return "";
@@ -232,7 +240,7 @@ function buildMatchCard(m) {
     <div class="match-row">
       <div class="match-team">
         ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
-        <span>${m.homeTeam.name}</span>
+        <span>${esNameFor(m.homeTeam.name)}</span>
         ${ownerAvatarHtml(m.homeTeam.name)}
       </div>
       <span class="match-row-score">${hasScore ? home : "-"}</span>
@@ -240,7 +248,7 @@ function buildMatchCard(m) {
     <div class="match-row">
       <div class="match-team">
         ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
-        <span>${m.awayTeam.name}</span>
+        <span>${esNameFor(m.awayTeam.name)}</span>
         ${ownerAvatarHtml(m.awayTeam.name)}
       </div>
       <span class="match-row-score">${hasScore ? away : "-"}</span>
@@ -329,7 +337,7 @@ function openPersonModal(person) {
       <div class="match-row">
         <div class="match-team">
           ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
-          <span>${m.homeTeam.name}</span>
+          <span>${esNameFor(m.homeTeam.name)}</span>
           ${ownerAvatarHtml(m.homeTeam.name)}
         </div>
         <span class="match-row-score">${hasScore ? home : "-"}</span>
@@ -337,7 +345,7 @@ function openPersonModal(person) {
       <div class="match-row">
         <div class="match-team">
           ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
-          <span>${m.awayTeam.name}</span>
+          <span>${esNameFor(m.awayTeam.name)}</span>
           ${ownerAvatarHtml(m.awayTeam.name)}
         </div>
         <span class="match-row-score">${hasScore ? away : "-"}</span>
