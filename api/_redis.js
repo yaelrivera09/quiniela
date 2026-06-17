@@ -3,8 +3,10 @@
 // que Vercel agrega automáticamente al conectar la integración de Upstash.
 
 export async function redisPipeline(commands) {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  // Vercel nombra las variables distinto según cómo se conectó la integración:
+  // UPSTASH_REDIS_REST_URL/TOKEN (Upstash directo) o KV_REST_API_URL/TOKEN (marketplace de Vercel).
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 
   if (!url || !token) {
     throw new Error("NO_REDIS_CONFIG");
