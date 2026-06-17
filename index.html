@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quiniela Familiar — Mundial 2026</title>
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <h1>⚽ Quiniela Familiar</h1>
+    <p class="subtitle">Mundial 2026 — ¡que gane el mejor!</p>
+    <div id="live-banner" class="live-banner hidden"></div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="participantes">Participantes</button>
+    <button class="tab-btn" data-tab="grupos">Tabla de grupos</button>
+    <button class="tab-btn" data-tab="partidos">Partidos</button>
+  </nav>
+
+  <main>
+    <section id="participantes" class="tab-panel active">
+      <div id="people-grid" class="people-grid"></div>
+    </section>
+
+    <section id="grupos" class="tab-panel">
+      <div id="api-warning" class="api-warning hidden">
+        No se pudo cargar la tabla de grupos en vivo. Configura <code>FOOTBALL_DATA_API_KEY</code> en Vercel.
+      </div>
+      <div id="groups-grid" class="groups-grid"></div>
+    </section>
+
+    <section id="partidos" class="tab-panel">
+      <div id="matches-warning" class="api-warning hidden">
+        No se pudieron cargar los partidos en vivo. Configura <code>FOOTBALL_DATA_API_KEY</code> en Vercel.
+      </div>
+      <div id="matches-list" class="matches-list"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Hecho con ❤️ para la familia · Datos en vivo vía football-data.org</p>
+  </footer>
+
+  <script src="data/people.js"></script>
+  <script src="js/script.js"></script>
+</body>
+</html>

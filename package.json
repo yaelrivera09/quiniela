@@ -1,0 +1,9 @@
+{
+  "name": "quiniela-familiar-2026",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Quiniela familiar del Mundial 2026 con resultados en vivo",
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}

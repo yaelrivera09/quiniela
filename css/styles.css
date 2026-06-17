@@ -1,0 +1,337 @@
+:root {
+  --green: #0e7a3f;
+  --green-dark: #0a5c2f;
+  --gold: #ffcb3d;
+  --red: #d9362b;
+  --bg: #0f1b14;
+  --card: #ffffff;
+  --text: #1c2620;
+  --muted: #6b7770;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: linear-gradient(180deg, var(--bg), #15281c 40%, #1c3322);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.hero {
+  text-align: center;
+  padding: 48px 16px 28px;
+  color: #fff;
+}
+
+.hero h1 {
+  font-size: 2.4rem;
+  margin: 0;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+.hero .subtitle {
+  margin-top: 6px;
+  color: var(--gold);
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.live-banner {
+  display: inline-block;
+  margin-top: 14px;
+  background: var(--red);
+  color: #fff;
+  padding: 6px 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  animation: pulse 1.8s infinite;
+}
+
+.hidden { display: none !important; }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217,54,43,.6); }
+  50% { box-shadow: 0 0 0 8px rgba(217,54,43,0); }
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.2);
+  padding: 10px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all .2s;
+}
+
+.tab-btn:hover { background: rgba(255,255,255,.18); }
+
+.tab-btn.active {
+  background: var(--gold);
+  color: #2b2200;
+  border-color: var(--gold);
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 16px 60px;
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ---- Participantes ---- */
+.people-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 22px;
+}
+
+.person-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.25);
+  transition: transform .2s;
+}
+
+.person-card:hover { transform: translateY(-4px); }
+
+.person-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+  border-bottom: 2px solid #eef2ef;
+  padding-bottom: 12px;
+}
+
+.person-photo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--gold);
+  background: #e9efe9;
+}
+
+.person-photo-fallback {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid var(--gold);
+  background: var(--green);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.person-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--green-dark);
+}
+
+.person-status {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.team-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f4f7f4;
+  font-weight: 600;
+  transition: background .2s, color .2s;
+}
+
+.team-row img.flag {
+  width: 28px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.1);
+}
+
+.team-row.eliminated {
+  background: #fdeceb;
+  color: var(--red);
+  text-decoration: line-through;
+}
+
+.team-row.eliminated::after {
+  content: "Eliminado";
+  margin-left: auto;
+  font-size: 0.68rem;
+  text-decoration: none;
+  background: var(--red);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.team-row.winner {
+  background: #e8f7ee;
+  color: var(--green-dark);
+}
+
+.team-row.winner::after {
+  content: "🏆 Campeón";
+  margin-left: auto;
+  font-size: 0.68rem;
+  background: var(--gold);
+  color: #2b2200;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+/* ---- Grupos ---- */
+.api-warning {
+  background: #fff3cd;
+  border: 1px solid #ffe69c;
+  color: #6a5200;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.group-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.2);
+}
+
+.group-card h3 {
+  margin: 0 0 10px;
+  color: var(--green-dark);
+}
+
+.group-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.group-table th, .group-table td {
+  padding: 6px 4px;
+  text-align: center;
+}
+
+.group-table th { color: var(--muted); font-weight: 600; }
+
+.group-table td.team-cell {
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.group-table tr:nth-child(odd) td { background: #f6f9f6; }
+
+.group-table tr.qualified td { background: #e3f6ea; }
+.group-table tr.eliminated-row td { color: var(--red); }
+
+.group-table img.flag-mini {
+  width: 20px;
+  height: 14px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+/* ---- Partidos ---- */
+.matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.match-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 6px 16px rgba(0,0,0,.15);
+}
+
+.match-card.is-live { border: 2px solid var(--red); }
+
+.match-teams {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.match-teams img.flag-mini {
+  width: 22px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 2px;
+}
+
+.match-score {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--green-dark);
+}
+
+.match-status {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #eef2ef;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.match-status.live {
+  background: var(--red);
+  color: #fff;
+}
+
+footer {
+  text-align: center;
+  color: rgba(255,255,255,.6);
+  padding: 18px;
+  font-size: 0.8rem;
+}
