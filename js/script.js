@@ -87,7 +87,6 @@ function renderPeople() {
           })
           .join("")}
       </div>
-      <button class="bet-btn bet-trigger" data-target="${person.name}" data-context="Apuesta general">🎲 Apostarle a ${person.name}</button>
     `;
     grid.appendChild(card);
   });
@@ -388,6 +387,11 @@ function openPersonModal(person) {
         </div>
         <span class="match-row-score">${hasScore ? away : "-"}</span>
       </div>
+      ${
+        m.status !== "FINISHED"
+          ? `<button class="bet-btn bet-trigger" data-target="${person.name}" data-context="${esNameFor(m.homeTeam.name)} vs ${esNameFor(m.awayTeam.name)} - ${formatTime(m.utcDate)}">🎲 Apostarle a ${person.name} en este partido</button>`
+          : ""
+      }
     </div>`;
   };
 
