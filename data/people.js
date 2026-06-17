@@ -28,7 +28,7 @@ const PEOPLE = [
     name: "Karen",
     photo: "Karen.jpeg",
     teams: [
-      { es: "Cabo Verde", flag: "cv", en: "Cape Verde" },
+      { es: "Cabo Verde", flag: "cv", en: "Cape Verde Islands" },
       { es: "Canadá", flag: "ca", en: "Canada" },
       { es: "Turquía", flag: "tr", en: "Turkey" },
       { es: "Portugal", flag: "pt", en: "Portugal" },
@@ -68,7 +68,7 @@ const PEOPLE = [
     name: "Oscar",
     photo: "Oscar.jpeg",
     teams: [
-      { es: "Curazao", flag: "cw", en: "Curacao" },
+      { es: "Curazao", flag: "cw", en: "Curaçao" },
       { es: "Túnez", flag: "tn", en: "Tunisia" },
       { es: "Suiza", flag: "ch", en: "Switzerland" },
       { es: "Marruecos", flag: "ma", en: "Morocco" },
@@ -88,8 +88,8 @@ const PEOPLE = [
     name: "Fanny",
     photo: "Fanny.jpeg",
     teams: [
-      { es: "Bosnia y Herzegovina", flag: "ba", en: "Bosnia and Herzegovina" },
-      { es: "Congo", flag: "cd", en: "DR Congo" },
+      { es: "Bosnia y Herzegovina", flag: "ba", en: "Bosnia-Herzegovina" },
+      { es: "Congo", flag: "cd", en: "Congo DR" },
       { es: "Colombia", flag: "co", en: "Colombia" },
       { es: "Inglaterra", flag: "gb-eng", en: "England" },
     ],
@@ -109,7 +109,7 @@ const PEOPLE = [
     photo: "Misuai.jpeg",
     teams: [
       { es: "Sudáfrica", flag: "za", en: "South Africa" },
-      { es: "República Checa", flag: "cz", en: "Czech Republic" },
+      { es: "República Checa", flag: "cz", en: "Czechia" },
       { es: "Estados Unidos", flag: "us", en: "United States" },
       { es: "Brasil", flag: "br", en: "Brazil" },
     ],
