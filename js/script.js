@@ -466,6 +466,10 @@ function openBetModal({ fromName, targetName, homeEn, awayEn, context }) {
   $("#bet-modal-context").textContent = currentBetContext;
   $("#bet-amount").value = "";
 
+  sendingBet = false;
+  $("#bet-send").disabled = false;
+  $("#bet-send").textContent = "Enviar apuesta por WhatsApp";
+
   $("#bet-modal").classList.remove("hidden");
   syncBodyScrollLock();
   $("#bet-amount").focus();
@@ -476,14 +480,20 @@ function closeBetModal() {
   syncBodyScrollLock();
 }
 
+let sendingBet = false;
+
 async function sendBet() {
-  if (!currentBetTarget) return;
+  if (!currentBetTarget || sendingBet) return;
   const amount = Number($("#bet-amount").value);
 
   if (!amount || amount <= 0) {
     alert("Pon una cantidad válida para la apuesta.");
     return;
   }
+
+  sendingBet = true;
+  $("#bet-send").disabled = true;
+  $("#bet-send").textContent = "Enviando...";
 
   try {
     const res = await fetch("/api/bets/create", {
@@ -513,6 +523,10 @@ async function sendBet() {
 
   const phoneDigits = currentBetTarget.phone.replace(/[^0-9]/g, "");
   window.open(`https://wa.me/${phoneDigits}?text=${encodeURIComponent(message)}`, "_blank");
+
+  sendingBet = false;
+  $("#bet-send").disabled = false;
+  $("#bet-send").textContent = "Enviar apuesta por WhatsApp";
 
   closeBetModal();
   loadBets();
