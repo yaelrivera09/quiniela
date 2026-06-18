@@ -3,6 +3,7 @@
 let teamStatus = {};
 let liveMatchesCount = 0;
 let allMatches = [];
+let lastBets = [];
 let currentBetTarget = null;
 let currentBetFrom = null;
 let currentBetContext = "";
@@ -209,6 +210,7 @@ async function loadMatches() {
     renderMatches(allMatches);
     applyMatchResultsToTeamStatus(allMatches);
     if (openPerson) openPersonModal(openPerson);
+    if (lastBets.length) renderBets(lastBets);
     return true;
   } catch (e) {
     $("#matches-warning").classList.remove("hidden");
@@ -684,7 +686,8 @@ async function loadBets() {
       return false;
     }
     $("#bets-warning").classList.add("hidden");
-    renderBets(data.bets || []);
+    lastBets = data.bets || [];
+    renderBets(lastBets);
     return true;
   } catch (e) {
     $("#bets-warning").classList.remove("hidden");
