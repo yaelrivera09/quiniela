@@ -677,6 +677,43 @@ body.modal-open {
 
 .bet-delete-btn:hover { color: var(--red); border-color: var(--red); }
 
+.bet-matchup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  flex-wrap: wrap;
+}
+
+.bet-matchup-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.bet-owner {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.76rem;
+}
+
+.bet-vs {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.bet-result {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.bet-result-win { color: var(--green); }
+.bet-result-draw { color: var(--gold); }
+
 /* ---- Responsive ---- */
 @media (max-width: 600px) {
   .hero { padding: 36px 16px 18px; }

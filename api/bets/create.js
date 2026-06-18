@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { targetName, amount, context } = req.body || {};
+    const { targetName, fromName, homeTeamEn, awayTeamEn, amount, context } = req.body || {};
 
     if (!targetName || !amount) {
       res.status(400).json({ error: "MISSING_FIELDS" });
@@ -19,6 +19,9 @@ export default async function handler(req, res) {
     const bet = {
       id,
       targetName,
+      fromName: fromName || "",
+      homeTeamEn: homeTeamEn || "",
+      awayTeamEn: awayTeamEn || "",
       amount: Number(amount),
       context: context || "",
       status: "pendiente",

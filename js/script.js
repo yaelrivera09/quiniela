@@ -4,7 +4,10 @@ let teamStatus = {};
 let liveMatchesCount = 0;
 let allMatches = [];
 let currentBetTarget = null;
+let currentBetFrom = null;
 let currentBetContext = "";
+let currentBetHomeEn = "";
+let currentBetAwayEn = "";
 
 const SITE_URL = "https://quiniela-drab-ten.vercel.app";
 
@@ -276,8 +279,18 @@ function buildMatchCard(m) {
       <span class="match-row-score">${hasScore ? away : "-"}</span>
     </div>
     <div class="match-bet-row" style="display:flex; gap:6px;">
-      ${homeOwner ? `<button class="bet-btn bet-trigger" data-target="${homeOwner.name}" data-context="${matchLabel}">🎲 ${homeOwner.name}</button>` : ""}
-      ${awayOwner ? `<button class="bet-btn bet-trigger" data-target="${awayOwner.name}" data-context="${matchLabel}">🎲 ${awayOwner.name}</button>` : ""}
+      ${
+        homeOwner && awayOwner
+          ? `<button class="bet-btn bet-trigger"
+              data-from="${awayOwner.name}" data-target="${homeOwner.name}"
+              data-home-en="${m.homeTeam.name}" data-away-en="${m.awayTeam.name}"
+              data-context="${matchLabel}">🎲 ${homeOwner.name}</button>
+            <button class="bet-btn bet-trigger"
+              data-from="${homeOwner.name}" data-target="${awayOwner.name}"
+              data-home-en="${m.homeTeam.name}" data-away-en="${m.awayTeam.name}"
+              data-context="${matchLabel}">🎲 ${awayOwner.name}</button>`
+          : ""
+      }
     </div>
   `;
   return card;
@@ -391,7 +404,10 @@ function openPersonModal(person) {
       </div>
       ${
         m.status !== "FINISHED" && rivalOwner && rivalOwner.name !== person.name
-          ? `<button class="bet-btn bet-trigger" data-target="${rivalOwner.name}" data-context="${esNameFor(m.homeTeam.name)} vs ${esNameFor(m.awayTeam.name)} - ${formatTime(m.utcDate)}">🎲 Apostarle a ${rivalOwner.name} en este partido</button>`
+          ? `<button class="bet-btn bet-trigger"
+              data-from="${person.name}" data-target="${rivalOwner.name}"
+              data-home-en="${m.homeTeam.name}" data-away-en="${m.awayTeam.name}"
+              data-context="${esNameFor(m.homeTeam.name)} vs ${esNameFor(m.awayTeam.name)} - ${formatTime(m.utcDate)}">🎲 Apostarle a ${rivalOwner.name} en este partido</button>`
           : ""
       }
     </div>`;
@@ -434,14 +450,19 @@ function syncBodyScrollLock() {
   document.body.classList.toggle("modal-open", anyOpen);
 }
 
-function openBetModal(targetName, context) {
+function openBetModal({ fromName, targetName, homeEn, awayEn, context }) {
   const target = PEOPLE.find((p) => p.name === targetName);
   if (!target) return;
 
   currentBetTarget = target;
+  currentBetFrom = PEOPLE.find((p) => p.name === fromName) || null;
   currentBetContext = context || "";
+  currentBetHomeEn = homeEn || "";
+  currentBetAwayEn = awayEn || "";
 
-  $("#bet-modal-title").textContent = `Apostarle a ${target.name}`;
+  $("#bet-modal-title").textContent = currentBetFrom
+    ? `${currentBetFrom.name} 🆚 ${target.name}`
+    : `Apostarle a ${target.name}`;
   $("#bet-modal-context").textContent = currentBetContext;
   $("#bet-amount").value = "";
 
@@ -470,6 +491,9 @@ async function sendBet() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         targetName: currentBetTarget.name,
+        fromName: currentBetFrom ? currentBetFrom.name : "",
+        homeTeamEn: currentBetHomeEn,
+        awayTeamEn: currentBetAwayEn,
         amount,
         context: currentBetContext,
       }),
@@ -505,8 +529,64 @@ function initBetModal() {
     const trigger = e.target.closest(".bet-trigger");
     if (!trigger) return;
     e.stopPropagation();
-    openBetModal(trigger.dataset.target, trigger.dataset.context);
+    openBetModal({
+      fromName: trigger.dataset.from,
+      targetName: trigger.dataset.target,
+      homeEn: trigger.dataset.homeEn,
+      awayEn: trigger.dataset.awayEn,
+      context: trigger.dataset.context,
+    });
   });
+}
+
+function findMatchByTeams(homeEn, awayEn) {
+  if (!homeEn || !awayEn) return null;
+  return (
+    allMatches.find((m) => m.homeTeam.name === homeEn && m.awayTeam.name === awayEn) || null
+  );
+}
+
+function betResultHtml(bet) {
+  const match = findMatchByTeams(bet.homeTeamEn, bet.awayTeamEn);
+  if (!match || match.status !== "FINISHED") return "";
+
+  const home = match.score?.fullTime?.home;
+  const away = match.score?.fullTime?.away;
+  if (home == null || away == null) return "";
+
+  if (home === away) {
+    return `<div class="bet-result bet-result-draw">🤝 Empate ${home}-${away}</div>`;
+  }
+
+  const winnerTeamEn = home > away ? bet.homeTeamEn : bet.awayTeamEn;
+  const winnerOwner = ownerFor(winnerTeamEn);
+  return `<div class="bet-result bet-result-win">🏆 Ganó ${winnerOwner ? winnerOwner.name : esNameFor(winnerTeamEn)} (${home}-${away})</div>`;
+}
+
+function betMatchupHtml(bet) {
+  if (!bet.homeTeamEn || !bet.awayTeamEn) {
+    return `<div class="bet-card-context">${bet.context || "Apuesta general"}</div>`;
+  }
+  const homeFlag = flagFor(bet.homeTeamEn);
+  const awayFlag = flagFor(bet.awayTeamEn);
+  const homeOwner = ownerFor(bet.homeTeamEn);
+  const awayOwner = ownerFor(bet.awayTeamEn);
+
+  return `
+    <div class="bet-matchup">
+      <div class="bet-matchup-team">
+        ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
+        <span>${esNameFor(bet.homeTeamEn)}</span>
+        <span class="bet-owner">(${homeOwner ? homeOwner.name : "?"})</span>
+      </div>
+      <span class="bet-vs">VS</span>
+      <div class="bet-matchup-team">
+        ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
+        <span>${esNameFor(bet.awayTeamEn)}</span>
+        <span class="bet-owner">(${awayOwner ? awayOwner.name : "?"})</span>
+      </div>
+    </div>
+  `;
 }
 
 function renderBets(bets) {
@@ -525,8 +605,9 @@ function renderBets(bets) {
     card.className = "bet-card";
     card.innerHTML = `
       <div class="bet-card-info">
-        <div class="bet-card-title">$${bet.amount} MXN — vs ${bet.targetName}</div>
-        <div class="bet-card-context">${bet.context || "Apuesta general"}</div>
+        <div class="bet-card-title">$${bet.amount} MXN — ${bet.fromName ? `${bet.fromName} 🆚 ${bet.targetName}` : `vs ${bet.targetName}`}</div>
+        ${betMatchupHtml(bet)}
+        ${betResultHtml(bet)}
       </div>
       <div class="bet-card-meta">
         <span class="bet-status ${bet.status}">${bet.status === "aceptada" ? "Aceptada" : "Pendiente"}</span>
