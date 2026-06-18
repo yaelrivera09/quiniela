@@ -620,6 +620,7 @@ function renderBets(bets) {
     card.innerHTML = `
       <div class="bet-card-info">
         <div class="bet-card-title">$${bet.amount} MXN — ${bet.fromName ? `${bet.fromName} 🆚 ${bet.targetName}` : `vs ${bet.targetName}`}</div>
+        ${bet.fromName ? `<div class="bet-card-sender">Apuesta enviada por <strong>${bet.fromName}</strong></div>` : ""}
         ${betMatchupHtml(bet)}
         ${betResultHtml(bet)}
       </div>

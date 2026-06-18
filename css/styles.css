@@ -633,6 +633,12 @@ body.modal-open {
   font-size: 0.78rem;
 }
 
+.bet-card-sender {
+  color: var(--muted);
+  font-size: 0.74rem;
+  margin-top: 2px;
+}
+
 .bet-card-meta {
   display: flex;
   align-items: center;
