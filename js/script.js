@@ -102,9 +102,12 @@ async function loadStandings() {
     const res = await fetch("/api/standings", { cache: "no-store" });
     const data = await res.json();
 
+    // Sí hubo conexión (no es excepción). Si viene vacío puede ser que la fase
+    // de grupos aún no esté publicada: mostramos aviso pero NO lo tratamos como
+    // "sin conexión", para no alarmar de más.
     if (data.error || !data.standings || data.standings.length === 0) {
       $("#api-warning").classList.remove("hidden");
-      return;
+      return true;
     }
     $("#api-warning").classList.add("hidden");
     renderGroups(data.standings);
@@ -310,8 +313,11 @@ function renderMatches(matches) {
   liveMatchesCount = matches.filter((m) => m.status === "IN_PLAY" || m.status === "PAUSED").length;
   updateLiveBanner();
 
+  // Mostramos los partidos de hoy, y SIEMPRE los que están en vivo aunque su
+  // hora de inicio (UTC) caiga en otro día local (ej. arrancó 23:40 y ya es
+  // pasada la medianoche): así un partido en curso nunca desaparece de la lista.
   const todays = matches
-    .filter((m) => isToday(m.utcDate))
+    .filter((m) => isToday(m.utcDate) || m.status === "IN_PLAY" || m.status === "PAUSED")
     .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
 
   if (todays.length === 0) {
@@ -568,7 +574,22 @@ function findMatchByTeams(homeEn, awayEn) {
 
 function betResultHtml(bet) {
   const match = findMatchByTeams(bet.homeTeamEn, bet.awayTeamEn);
-  if (!match || match.status !== "FINISHED") return "";
+  if (!match) return "";
+
+  // Partido aún por jugar: mostramos cuándo es.
+  if (match.status === "SCHEDULED" || match.status === "TIMED") {
+    return `<div class="bet-when">🕐 ${formatDate(match.utcDate)} · ${formatTime(match.utcDate)}</div>`;
+  }
+
+  // Partido en vivo: mostramos el marcador en curso.
+  if (match.status === "IN_PLAY" || match.status === "PAUSED") {
+    const h = match.score?.fullTime?.home ?? match.score?.halfTime?.home ?? 0;
+    const a = match.score?.fullTime?.away ?? match.score?.halfTime?.away ?? 0;
+    const label = match.status === "PAUSED" ? "Medio tiempo" : "EN VIVO";
+    return `<div class="bet-result bet-result-live">🔴 ${label} ${h}-${a}</div>`;
+  }
+
+  if (match.status !== "FINISHED") return "";
 
   const home = match.score?.fullTime?.home;
   const away = match.score?.fullTime?.away;
@@ -709,6 +730,13 @@ function updateLiveBanner() {
 // En vez de timers fijos, ajustamos qué tan seguido se consulta según si hay
 // partidos en vivo ahora mismo: más agresivo cuando importa, más relajado
 // cuando no pasa nada (ahorra llamadas y batería sin perder frescura real).
+const POLL = {
+  matchesLive: 7000,   // hay partido en vivo: refrescamos seguido
+  matchesIdle: 45000,  // nada en vivo: con calma
+  standings: 120000,   // la tabla cambia poco
+  bets: 20000,         // apuestas
+};
+
 let matchesTimer = null;
 let standingsTimer = null;
 let betsTimer = null;
@@ -716,11 +744,15 @@ let refreshInFlight = false;
 
 function setLastUpdated(ok) {
   const el = $("#last-updated");
+  if (!el) return;
   const time = new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   el.textContent = ok ? `Actualizado: ${time}` : `Sin conexión — último intento: ${time}`;
   el.style.color = ok ? "" : "var(--red)";
 }
 
+// El estado "Actualizado / Sin conexión" se basa en los partidos: es el dato
+// en vivo que de verdad importa. La tabla y las apuestas tienen sus propios
+// avisos y pueden venir legítimamente vacías sin que sea una falla de red.
 async function refreshAll(manual) {
   if (refreshInFlight && !manual) return;
   refreshInFlight = true;
@@ -731,12 +763,12 @@ async function refreshAll(manual) {
     btn.textContent = "🔄 Actualizando...";
   }
 
-  const [matchesOk, standingsOk, betsOk] = await Promise.all([
+  const [matchesOk] = await Promise.all([
     loadMatches(),
     loadStandings(),
     loadBets(),
   ]);
-  setLastUpdated(matchesOk && standingsOk && betsOk);
+  setLastUpdated(matchesOk);
 
   if (manual) {
     const btn = $("#refresh-now");
@@ -748,7 +780,7 @@ async function refreshAll(manual) {
 
 function scheduleMatches() {
   clearTimeout(matchesTimer);
-  const delay = liveMatchesCount > 0 ? 7000 : 45000;
+  const delay = liveMatchesCount > 0 ? POLL.matchesLive : POLL.matchesIdle;
   matchesTimer = setTimeout(async () => {
     const ok = await loadMatches();
     setLastUpdated(ok);
@@ -761,7 +793,7 @@ function scheduleStandings() {
   standingsTimer = setTimeout(async () => {
     await loadStandings();
     scheduleStandings();
-  }, 120000);
+  }, POLL.standings);
 }
 
 function scheduleBets() {
@@ -769,7 +801,19 @@ function scheduleBets() {
   betsTimer = setTimeout(async () => {
     await loadBets();
     scheduleBets();
-  }, 20000);
+  }, POLL.bets);
+}
+
+function startSchedules() {
+  scheduleMatches();
+  scheduleStandings();
+  scheduleBets();
+}
+
+function pauseSchedules() {
+  clearTimeout(matchesTimer);
+  clearTimeout(standingsTimer);
+  clearTimeout(betsTimer);
 }
 
 /* ---------- Init ---------- */
@@ -779,29 +823,26 @@ function init() {
   initBetModal();
   renderPeople();
 
-  refreshAll(false).then(() => {
-    scheduleMatches();
-    scheduleStandings();
-    scheduleBets();
-  });
+  const lu = $("#last-updated");
+  if (lu) lu.textContent = "Actualizando…";
+
+  refreshAll(false).then(startSchedules);
 
   $("#refresh-now").addEventListener("click", () => refreshAll(true));
 
-  // Los navegadores pausan los timers cuando la pestaña está en segundo
-  // plano o la pantalla bloqueada. Al volver a primer plano, forzamos un
-  // refresco inmediato para no mostrar datos viejos (ej. un partido que ya
-  // terminó pero seguía marcado "EN VIVO"), y reiniciamos los temporizadores
-  // para que no se acumulen ciclos perdidos.
+  // Al volver a primer plano forzamos un refresco inmediato (para no mostrar
+  // datos viejos, ej. un partido que ya terminó pero seguía "EN VIVO") y
+  // reiniciamos los temporizadores. Cuando la app pasa a segundo plano,
+  // detenemos el polling: los navegadores ya lo estrangulan, así evitamos
+  // llamadas inútiles y ahorramos batería.
   const onResume = () => {
-    refreshAll(false).then(() => {
-      scheduleMatches();
-      scheduleStandings();
-      scheduleBets();
-    });
+    pauseSchedules();
+    refreshAll(false).then(startSchedules);
   };
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") onResume();
+    else pauseSchedules();
   });
 
   // En apps agregadas a la pantalla de inicio en iOS (modo standalone),

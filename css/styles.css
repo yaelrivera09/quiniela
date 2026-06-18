@@ -28,6 +28,7 @@ body {
 .hero {
   text-align: center;
   padding: 56px 16px 24px;
+  padding-top: calc(56px + env(safe-area-inset-top));
 }
 
 .hero h1 {
@@ -466,6 +467,7 @@ footer {
   text-align: center;
   color: var(--muted);
   padding: 18px;
+  padding-bottom: calc(18px + env(safe-area-inset-bottom));
   font-size: 0.75rem;
 }
 
@@ -523,7 +525,7 @@ body.modal-open {
   box-shadow: 0 4px 14px rgba(0,0,0,.25);
 }
 
-.modal-content h2 {
+#modal-content h2 {
   margin: 0 0 4px;
   font-size: 1.2rem;
 }
@@ -747,6 +749,14 @@ body.modal-open {
 
 .bet-result-win { color: var(--green); }
 .bet-result-draw { color: var(--gold); }
+.bet-result-live { color: var(--red); }
+
+.bet-when {
+  margin-top: 4px;
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-weight: 600;
+}
 
 /* ---- Responsive ---- */
 @media (max-width: 600px) {
