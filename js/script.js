@@ -98,7 +98,7 @@ function renderPeople() {
 /* ---------- Tabla de grupos ---------- */
 async function loadStandings() {
   try {
-    const res = await fetch("/api/standings");
+    const res = await fetch("/api/standings", { cache: "no-store" });
     const data = await res.json();
 
     if (data.error || !data.standings || data.standings.length === 0) {
@@ -197,7 +197,7 @@ function renderGroups(standings) {
 /* ---------- Partidos ---------- */
 async function loadMatches() {
   try {
-    const res = await fetch("/api/matches");
+    const res = await fetch("/api/matches", { cache: "no-store" });
     const data = await res.json();
 
     if (data.error || !data.matches) {
@@ -676,7 +676,7 @@ async function acceptBet(id) {
 
 async function loadBets() {
   try {
-    const res = await fetch("/api/bets/list");
+    const res = await fetch("/api/bets/list", { cache: "no-store" });
     const data = await res.json();
 
     if (data.error) {
