@@ -748,7 +748,7 @@ async function refreshAll(manual) {
 
 function scheduleMatches() {
   clearTimeout(matchesTimer);
-  const delay = liveMatchesCount > 0 ? 10000 : 45000;
+  const delay = liveMatchesCount > 0 ? 7000 : 45000;
   matchesTimer = setTimeout(async () => {
     const ok = await loadMatches();
     setLastUpdated(ok);

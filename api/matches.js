@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    res.setHeader("Cache-Control", "s-maxage=15, stale-while-revalidate=10");
+    res.setHeader("Cache-Control", "s-maxage=8, stale-while-revalidate=5");
     res.status(200).json({ matches: data.matches || [] });
   } catch (err) {
     res.status(200).json({ error: "FETCH_FAILED", message: err.message, matches: [] });
