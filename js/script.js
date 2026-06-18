@@ -706,10 +706,22 @@ function init() {
   loadMatches();
   loadBets();
 
-  // Refresca datos en vivo cada 30s
+  // Refresca datos en vivo cada 15s mientras la pestaña está activa
   setInterval(loadMatches, 15000);
   setInterval(loadStandings, 120000);
   setInterval(loadBets, 20000);
+
+  // Los navegadores pausan los setInterval cuando la pestaña está en segundo
+  // plano o la pantalla bloqueada. Al volver a primer plano, forzamos un
+  // refresco inmediato para no mostrar datos viejos (ej. un partido que ya
+  // terminó pero seguía marcado "EN VIVO").
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      loadMatches();
+      loadStandings();
+      loadBets();
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", init);
