@@ -817,7 +817,17 @@ function pauseSchedules() {
 }
 
 /* ---------- Init ---------- */
+function detectStandalone() {
+  // En iOS, una app agregada a la pantalla de inicio expone navigator.standalone.
+  // En el resto de plataformas usamos la media query display-mode: standalone.
+  const isStandalone =
+    window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  if (isStandalone) document.documentElement.classList.add("standalone");
+}
+
 function init() {
+  detectStandalone();
   initTabs();
   initModal();
   initBetModal();

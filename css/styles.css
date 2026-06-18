@@ -27,9 +27,21 @@ body {
 
 .hero {
   text-align: center;
-  padding: 56px 16px 24px;
-  padding-top: calc(56px + env(safe-area-inset-top));
+  padding: 48px 16px 24px;
 }
+
+/* Cuando la app se abre como acceso directo en la pantalla de inicio
+   (standalone), no hay barra de URL de Safari: damos más aire arriba para
+   que el título no quede pegado a la barra de estado / isla dinámica.
+   Detectamos el modo por media query y, como respaldo en iOS, por la clase
+   .standalone que añade el JS. */
+@media (display-mode: standalone) {
+  .hero { padding-top: 48px; }
+  .tabs { padding-top: 16px; }
+}
+
+html.standalone .hero { padding-top: 48px; }
+html.standalone .tabs { padding-top: 16px; }
 
 .hero h1 {
   font-size: 1.9rem;
@@ -91,13 +103,13 @@ body {
   display: flex;
   justify-content: center;
   gap: 6px;
-  padding: 0 16px 8px;
+  padding: 12px 16px 10px;
   flex-wrap: wrap;
   position: sticky;
   top: 0;
   z-index: 5;
   background: var(--bg);
-  padding-top: 12px;
+  border-bottom: 1px solid var(--line);
 }
 
 .tab-btn {
@@ -467,7 +479,6 @@ footer {
   text-align: center;
   color: var(--muted);
   padding: 18px;
-  padding-bottom: calc(18px + env(safe-area-inset-bottom));
   font-size: 0.75rem;
 }
 
