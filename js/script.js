@@ -715,13 +715,21 @@ function init() {
   // plano o la pantalla bloqueada. Al volver a primer plano, forzamos un
   // refresco inmediato para no mostrar datos viejos (ej. un partido que ya
   // terminó pero seguía marcado "EN VIVO").
+  const refreshAll = () => {
+    loadMatches();
+    loadStandings();
+    loadBets();
+  };
+
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") {
-      loadMatches();
-      loadStandings();
-      loadBets();
-    }
+    if (document.visibilityState === "visible") refreshAll();
   });
+
+  // En apps agregadas a la pantalla de inicio en iOS (modo standalone),
+  // "visibilitychange" no siempre se dispara. "pageshow" y "focus" sí
+  // cubren ese caso al reabrir la app desde el ícono.
+  window.addEventListener("pageshow", refreshAll);
+  window.addEventListener("focus", refreshAll);
 }
 
 document.addEventListener("DOMContentLoaded", init);
