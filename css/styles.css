@@ -58,6 +58,34 @@ body {
 
 .hidden { display: none !important; }
 
+.sync-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.last-updated {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.refresh-btn {
+  background: var(--accent-soft);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.refresh-btn:hover { background: #e3e6eb; }
+.refresh-btn.spinning { opacity: 0.6; pointer-events: none; }
+
 .tabs {
   display: flex;
   justify-content: center;

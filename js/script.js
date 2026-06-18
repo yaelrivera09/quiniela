@@ -107,8 +107,10 @@ async function loadStandings() {
     }
     $("#api-warning").classList.add("hidden");
     renderGroups(data.standings);
+    return true;
   } catch (e) {
     $("#api-warning").classList.remove("hidden");
+    return false;
   }
 }
 
@@ -200,15 +202,17 @@ async function loadMatches() {
 
     if (data.error || !data.matches) {
       $("#matches-warning").classList.remove("hidden");
-      return;
+      return false;
     }
     $("#matches-warning").classList.add("hidden");
     allMatches = data.matches;
     renderMatches(allMatches);
     applyMatchResultsToTeamStatus(allMatches);
     if (openPerson) openPersonModal(openPerson);
+    return true;
   } catch (e) {
     $("#matches-warning").classList.remove("hidden");
+    return false;
   }
 }
 
@@ -677,12 +681,14 @@ async function loadBets() {
 
     if (data.error) {
       $("#bets-warning").classList.remove("hidden");
-      return;
+      return false;
     }
     $("#bets-warning").classList.add("hidden");
     renderBets(data.bets || []);
+    return true;
   } catch (e) {
     $("#bets-warning").classList.remove("hidden");
+    return false;
   }
 }
 
@@ -696,40 +702,110 @@ function updateLiveBanner() {
   }
 }
 
+/* ---------- Motor de actualización ---------- */
+// En vez de timers fijos, ajustamos qué tan seguido se consulta según si hay
+// partidos en vivo ahora mismo: más agresivo cuando importa, más relajado
+// cuando no pasa nada (ahorra llamadas y batería sin perder frescura real).
+let matchesTimer = null;
+let standingsTimer = null;
+let betsTimer = null;
+let refreshInFlight = false;
+
+function setLastUpdated(ok) {
+  const el = $("#last-updated");
+  const time = new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  el.textContent = ok ? `Actualizado: ${time}` : `Sin conexión — último intento: ${time}`;
+  el.style.color = ok ? "" : "var(--red)";
+}
+
+async function refreshAll(manual) {
+  if (refreshInFlight && !manual) return;
+  refreshInFlight = true;
+
+  if (manual) {
+    const btn = $("#refresh-now");
+    btn.classList.add("spinning");
+    btn.textContent = "🔄 Actualizando...";
+  }
+
+  const [matchesOk, standingsOk, betsOk] = await Promise.all([
+    loadMatches(),
+    loadStandings(),
+    loadBets(),
+  ]);
+  setLastUpdated(matchesOk && standingsOk && betsOk);
+
+  if (manual) {
+    const btn = $("#refresh-now");
+    btn.classList.remove("spinning");
+    btn.textContent = "🔄 Actualizar";
+  }
+  refreshInFlight = false;
+}
+
+function scheduleMatches() {
+  clearTimeout(matchesTimer);
+  const delay = liveMatchesCount > 0 ? 10000 : 45000;
+  matchesTimer = setTimeout(async () => {
+    const ok = await loadMatches();
+    setLastUpdated(ok);
+    scheduleMatches();
+  }, delay);
+}
+
+function scheduleStandings() {
+  clearTimeout(standingsTimer);
+  standingsTimer = setTimeout(async () => {
+    await loadStandings();
+    scheduleStandings();
+  }, 120000);
+}
+
+function scheduleBets() {
+  clearTimeout(betsTimer);
+  betsTimer = setTimeout(async () => {
+    await loadBets();
+    scheduleBets();
+  }, 20000);
+}
+
 /* ---------- Init ---------- */
 function init() {
   initTabs();
   initModal();
   initBetModal();
   renderPeople();
-  loadStandings();
-  loadMatches();
-  loadBets();
 
-  // Refresca datos en vivo cada 15s mientras la pestaña está activa
-  setInterval(loadMatches, 15000);
-  setInterval(loadStandings, 120000);
-  setInterval(loadBets, 20000);
+  refreshAll(false).then(() => {
+    scheduleMatches();
+    scheduleStandings();
+    scheduleBets();
+  });
 
-  // Los navegadores pausan los setInterval cuando la pestaña está en segundo
+  $("#refresh-now").addEventListener("click", () => refreshAll(true));
+
+  // Los navegadores pausan los timers cuando la pestaña está en segundo
   // plano o la pantalla bloqueada. Al volver a primer plano, forzamos un
   // refresco inmediato para no mostrar datos viejos (ej. un partido que ya
-  // terminó pero seguía marcado "EN VIVO").
-  const refreshAll = () => {
-    loadMatches();
-    loadStandings();
-    loadBets();
+  // terminó pero seguía marcado "EN VIVO"), y reiniciamos los temporizadores
+  // para que no se acumulen ciclos perdidos.
+  const onResume = () => {
+    refreshAll(false).then(() => {
+      scheduleMatches();
+      scheduleStandings();
+      scheduleBets();
+    });
   };
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") refreshAll();
+    if (document.visibilityState === "visible") onResume();
   });
 
   // En apps agregadas a la pantalla de inicio en iOS (modo standalone),
   // "visibilitychange" no siempre se dispara. "pageshow" y "focus" sí
   // cubren ese caso al reabrir la app desde el ícono.
-  window.addEventListener("pageshow", refreshAll);
-  window.addEventListener("focus", refreshAll);
+  window.addEventListener("pageshow", onResume);
+  window.addEventListener("focus", onResume);
 }
 
 document.addEventListener("DOMContentLoaded", init);
