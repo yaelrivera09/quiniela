@@ -284,11 +284,11 @@ function buildMatchCard(m) {
           ? `<button class="bet-btn bet-trigger"
               data-from="${awayOwner.name}" data-target="${homeOwner.name}"
               data-home-en="${m.homeTeam.name}" data-away-en="${m.awayTeam.name}"
-              data-context="${matchLabel}">🎲 ${homeOwner.name}</button>
+              data-context="${matchLabel}">🎲 Apostar a ${homeOwner.name}</button>
             <button class="bet-btn bet-trigger"
               data-from="${homeOwner.name}" data-target="${awayOwner.name}"
               data-home-en="${m.homeTeam.name}" data-away-en="${m.awayTeam.name}"
-              data-context="${matchLabel}">🎲 ${awayOwner.name}</button>`
+              data-context="${matchLabel}">🎲 Apostar a ${awayOwner.name}</button>`
           : ""
       }
     </div>
