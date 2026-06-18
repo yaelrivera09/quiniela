@@ -692,7 +692,7 @@ function init() {
   loadBets();
 
   // Refresca datos en vivo cada 30s
-  setInterval(loadMatches, 30000);
+  setInterval(loadMatches, 15000);
   setInterval(loadStandings, 120000);
   setInterval(loadBets, 20000);
 }
