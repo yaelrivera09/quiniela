@@ -4,6 +4,7 @@ let teamStatus = {};
 let liveMatchesCount = 0;
 let allMatches = [];
 let lastBets = [];
+let advancingTeams = new Set(); // equipos que ya están en el cuadro de eliminación
 let currentBetTarget = null;
 let currentBetFrom = null;
 let currentBetContext = "";
@@ -162,7 +163,9 @@ function renderGroups(standings) {
     const rows = group.table
       .map((row, idx) => {
         const flag = flagFor(row.team.name);
-        const qualified = idx < 2; // primeros 2 lugares avanzan (referencia visual)
+        // Los 2 primeros avanzan siempre; un 3º puede avanzar como mejor tercero
+        // (lo confirmamos si ya aparece en el cuadro de eliminación).
+        const qualified = idx < 2 || advancingTeams.has(row.team.name);
         const eliminated = teamStatus[row.team.name] && teamStatus[row.team.name].eliminated;
         return `<tr class="${qualified ? "qualified" : ""} ${eliminated ? "eliminated-row" : ""}">
           <td>${row.position}</td>
@@ -191,11 +194,25 @@ function renderGroups(standings) {
     `;
     grid.appendChild(card);
 
-    // Actualiza el estado de eliminación: si el equipo no califica y el grupo ya terminó (4 juegos cada uno aprox.)
     group.table.forEach((row) => {
       if (!teamStatus[row.team.name]) teamStatus[row.team.name] = {};
     });
+
+    // Si el grupo ya terminó (todos jugaron sus 3 partidos), el último lugar
+    // queda eliminado con certeza: en el formato de 48, el 4º nunca avanza.
+    const groupDone = group.table.length > 0 && group.table.every((r) => r.playedGames >= 3);
+    if (groupDone) {
+      const last = group.table[group.table.length - 1];
+      if (last) {
+        teamStatus[last.team.name] = teamStatus[last.team.name] || {};
+        teamStatus[last.team.name].eliminated = true;
+      }
+    }
   });
+
+  // Reflejamos de inmediato cualquier eliminación recién detectada en las
+  // tarjetas de participantes (corazones rotos).
+  renderPeople();
 }
 
 /* ---------- Partidos ---------- */
@@ -232,6 +249,20 @@ const STATUS_LABELS = {
   CANCELLED: "Cancelado",
 };
 
+const STAGE_LABELS = {
+  LAST_32: "Dieciseisavos",
+  LAST_16: "Octavos",
+  QUARTER_FINALS: "Cuartos",
+  SEMI_FINALS: "Semifinal",
+  THIRD_PLACE: "Tercer lugar",
+  FINAL: "Final",
+};
+
+// Etiqueta de ronda solo para eliminación directa (en grupos no aporta nada).
+function stageLabelFor(stage) {
+  return stage && stage !== "GROUP_STAGE" ? STAGE_LABELS[stage] || "" : "";
+}
+
 function isToday(dateStr) {
   const d = new Date(dateStr);
   const now = new Date();
@@ -263,12 +294,13 @@ function buildMatchCard(m) {
   const homeOwner = ownerFor(m.homeTeam.name);
   const awayOwner = ownerFor(m.awayTeam.name);
   const matchLabel = `${esNameFor(m.homeTeam.name)} vs ${esNameFor(m.awayTeam.name)} - ${formatTime(m.utcDate)}`;
+  const stage = stageLabelFor(m.stage);
 
   const card = document.createElement("div");
   card.className = "match-card" + (isLive ? " is-live" : "");
   card.innerHTML = `
     <div class="match-header">
-      <span class="match-time">${formatTime(m.utcDate)}</span>
+      <span class="match-time">${formatTime(m.utcDate)}${stage ? ` · ${stage}` : ""}</span>
       <span class="match-status ${statusClass(m.status)}">${STATUS_LABELS[m.status] || m.status}</span>
     </div>
     <div class="match-row">
@@ -330,27 +362,73 @@ function renderMatches(matches) {
 }
 
 function applyMatchResultsToTeamStatus(matches) {
-  // Marca como eliminado a un equipo que perdió un partido de eliminación directa (knockout)
+  // 1) Reunimos qué equipos ya están en el cuadro de eliminación (LAST_32 en
+  //    adelante) y si la fase de grupos ya terminó por completo.
+  const knockoutTeams = new Set();
+  const groupTeams = new Set();
+  let groupTotal = 0;
+  let groupFinished = 0;
+
+  matches.forEach((m) => {
+    const isKnockout = m.stage && m.stage !== "GROUP_STAGE";
+    if (isKnockout) {
+      if (m.homeTeam?.name) knockoutTeams.add(m.homeTeam.name);
+      if (m.awayTeam?.name) knockoutTeams.add(m.awayTeam.name);
+    } else {
+      groupTotal++;
+      if (m.status === "FINISHED") groupFinished++;
+      if (m.homeTeam?.name) groupTeams.add(m.homeTeam.name);
+      if (m.awayTeam?.name) groupTeams.add(m.awayTeam.name);
+    }
+  });
+
+  advancingTeams = knockoutTeams; // lo usa la tabla de grupos para marcar terceros
+
+  // 2) Eliminados de la fase de grupos: cuando ya terminaron TODOS los partidos
+  //    de grupos y el cuadro está armado, cualquier equipo de grupos que no
+  //    aparezca en el cuadro quedó fuera (son los 16 que no avanzan en formato 48).
+  const groupStageDone = groupTotal > 0 && groupFinished === groupTotal;
+  if (groupStageDone && knockoutTeams.size > 0) {
+    groupTeams.forEach((name) => {
+      if (!knockoutTeams.has(name)) {
+        teamStatus[name] = teamStatus[name] || {};
+        teamStatus[name].eliminated = true;
+      }
+    });
+  }
+
+  // 3) Eliminados por perder en eliminación directa (usamos score.winner, que
+  //    ya considera penales) y campeón al ganar la final.
   matches.forEach((m) => {
     if (m.status !== "FINISHED") return;
     const isKnockout = m.stage && m.stage !== "GROUP_STAGE";
     if (!isKnockout) return;
 
+    const winner = m.score?.winner; // HOME_TEAM | AWAY_TEAM | DRAW
     const home = m.score?.fullTime?.home;
     const away = m.score?.fullTime?.away;
-    if (home == null || away == null) return;
 
     let loserName = null;
-    if (home < away) loserName = m.homeTeam.name;
-    else if (away < home) loserName = m.awayTeam.name;
-    else return; // empate -> probablemente penales, no diferenciamos aquí
+    let winnerName = null;
+    if (winner === "HOME_TEAM") {
+      winnerName = m.homeTeam?.name;
+      loserName = m.awayTeam?.name;
+    } else if (winner === "AWAY_TEAM") {
+      winnerName = m.awayTeam?.name;
+      loserName = m.homeTeam?.name;
+    } else if (home != null && away != null && home !== away) {
+      winnerName = home > away ? m.homeTeam?.name : m.awayTeam?.name;
+      loserName = home > away ? m.awayTeam?.name : m.homeTeam?.name;
+    } else {
+      return; // sin ganador claro todavía (ej. empate pendiente de penales)
+    }
 
-    if (!teamStatus[loserName]) teamStatus[loserName] = {};
-    teamStatus[loserName].eliminated = true;
-
-    if (m.stage === "FINAL") {
-      const winnerName = home > away ? m.homeTeam.name : m.awayTeam.name;
-      if (!teamStatus[winnerName]) teamStatus[winnerName] = {};
+    if (loserName) {
+      teamStatus[loserName] = teamStatus[loserName] || {};
+      teamStatus[loserName].eliminated = true;
+    }
+    if (m.stage === "FINAL" && winnerName) {
+      teamStatus[winnerName] = teamStatus[winnerName] || {};
       teamStatus[winnerName].winner = true;
     }
   });
@@ -395,7 +473,7 @@ function openPersonModal(person) {
 
     return `<div class="modal-match ${resultClass}">
       <div class="modal-match-header">
-        <span>${formatDate(m.utcDate)}</span>
+        <span>${formatDate(m.utcDate)}${stageLabelFor(m.stage) ? ` · ${stageLabelFor(m.stage)}` : ""}</span>
         <span class="match-status ${statusClass(m.status)}">${isLive ? "EN VIVO" : STATUS_LABELS[m.status] || m.status}</span>
       </div>
       <div class="match-row">
