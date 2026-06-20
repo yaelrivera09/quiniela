@@ -482,6 +482,94 @@ footer {
   font-size: 0.75rem;
 }
 
+/* ---- Llaves (bracket) ---- */
+.bracket {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bk-col {
+  flex: 0 0 auto;
+  width: 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bk-col-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  padding-bottom: 2px;
+}
+
+.bk-match {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.bk-match.bk-live { border-color: var(--red); }
+
+.bk-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.bk-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.bk-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bk-crest {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  object-fit: contain;
+}
+
+.bk-team .owner-avatar,
+.bk-team .owner-avatar-fallback {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+}
+
+.bk-tbd {
+  color: var(--muted);
+  font-weight: 500;
+  font-style: italic;
+}
+
+.bk-win .bk-name { color: var(--green); font-weight: 800; }
+
+.bk-score {
+  font-weight: 700;
+  font-size: 0.85rem;
+  min-width: 14px;
+  text-align: right;
+}
+
 /* ---- Modal: partidos de un participante ---- */
 body.modal-open {
   overflow: hidden;

@@ -229,6 +229,7 @@ async function loadMatches() {
     allMatches = data.matches;
     renderMatches(allMatches);
     applyMatchResultsToTeamStatus(allMatches);
+    renderBracket(allMatches);
     if (openPerson) openPersonModal(openPerson);
     if (lastBets.length) renderBets(lastBets);
     return true;
@@ -434,6 +435,92 @@ function applyMatchResultsToTeamStatus(matches) {
   });
 
   renderPeople();
+}
+
+/* ---------- Llaves (cuadro de eliminación) ---------- */
+const BRACKET_ROUNDS = [
+  ["LAST_32", "Dieciseisavos"],
+  ["LAST_16", "Octavos"],
+  ["QUARTER_FINALS", "Cuartos"],
+  ["SEMI_FINALS", "Semifinal"],
+  ["FINAL", "Final"],
+];
+
+function bracketWinnerSide(m) {
+  // Devuelve "home" | "away" | null según quién ganó (considera penales).
+  if (m.status !== "FINISHED") return null;
+  const w = m.score?.winner;
+  if (w === "HOME_TEAM") return "home";
+  if (w === "AWAY_TEAM") return "away";
+  const h = m.score?.fullTime?.home;
+  const a = m.score?.fullTime?.away;
+  if (h != null && a != null && h !== a) return h > a ? "home" : "away";
+  return null;
+}
+
+function bracketTeamHtml(team, isWinner) {
+  if (!team || !team.name) {
+    return `<div class="bk-team bk-tbd"><span>Por definir</span></div>`;
+  }
+  return `<div class="bk-team ${isWinner ? "bk-win" : ""}">
+    ${team.crest ? `<img class="bk-crest" src="${team.crest}" alt="" loading="lazy" />` : ""}
+    <span class="bk-name">${esNameFor(team.name)}</span>
+    ${ownerAvatarHtml(team.name)}
+  </div>`;
+}
+
+function bracketMatchHtml(m) {
+  const win = bracketWinnerSide(m);
+  const h = m.score?.fullTime?.home;
+  const a = m.score?.fullTime?.away;
+  const hasScore = h != null && a != null;
+  const isLive = m.status === "IN_PLAY" || m.status === "PAUSED";
+  return `<div class="bk-match ${isLive ? "bk-live" : ""}">
+    <div class="bk-row">
+      ${bracketTeamHtml(m.homeTeam, win === "home")}
+      <span class="bk-score">${hasScore ? h : ""}</span>
+    </div>
+    <div class="bk-row">
+      ${bracketTeamHtml(m.awayTeam, win === "away")}
+      <span class="bk-score">${hasScore ? a : ""}</span>
+    </div>
+  </div>`;
+}
+
+function renderBracket(matches) {
+  const wrap = $("#bracket");
+  const info = $("#bracket-info");
+  if (!wrap) return;
+
+  const cols = BRACKET_ROUNDS.map(([stage, label]) => {
+    const ms = matches
+      .filter((m) => m.stage === stage)
+      .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+    if (ms.length === 0) return "";
+    return `<div class="bk-col">
+      <div class="bk-col-title">${label}</div>
+      ${ms.map(bracketMatchHtml).join("")}
+    </div>`;
+  });
+
+  // Partido por el tercer lugar, como columna extra al final.
+  const third = matches
+    .filter((m) => m.stage === "THIRD_PLACE")
+    .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+  if (third.length) {
+    cols.push(`<div class="bk-col">
+      <div class="bk-col-title">Tercer lugar</div>
+      ${third.map(bracketMatchHtml).join("")}
+    </div>`);
+  }
+
+  wrap.innerHTML = cols.join("");
+
+  // Aviso mientras el cuadro aún no tiene equipos definidos.
+  const anyDefined = matches.some(
+    (m) => m.stage && m.stage !== "GROUP_STAGE" && (m.homeTeam?.name || m.awayTeam?.name)
+  );
+  info.classList.toggle("hidden", anyDefined);
 }
 
 /* ---------- Modal de participante ---------- */
