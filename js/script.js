@@ -170,15 +170,18 @@ function renderGroups(standings) {
         const flag = flagFor(row.team.name);
         const st = teamStatus[row.team.name] || {};
         const eliminated = !!st.eliminated;
-        // Los 2 primeros avanzan siempre; un 3º puede avanzar como mejor tercero
-        // (lo confirmamos si ya está asegurado o ya aparece en el cuadro).
-        const qualified = !eliminated && (idx < 2 || st.advancing || advancingTeams.has(row.team.name));
+        // "secured" = ya aseguró su pase matemáticamente (top-2 o ya en el cuadro).
+        // "inZone" = hoy está en puesto de clasificación, pero aún no asegurado:
+        // se resalta en verde como referencia, pero SIN etiqueta para no afirmar de más.
+        const secured = !eliminated && !!st.advancing;
+        const inZone = !eliminated && idx < 2;
+        const rowCls = eliminated ? "eliminated-row" : secured || inZone ? "qualified" : "";
         const tag = eliminated
           ? `<span class="grp-tag grp-tag-out">Eliminado</span>`
-          : qualified
+          : secured
           ? `<span class="grp-tag grp-tag-in">16avos</span>`
           : "";
-        return `<tr class="${qualified ? "qualified" : ""} ${eliminated ? "eliminated-row" : ""}">
+        return `<tr class="${rowCls}">
           <td>${row.position}</td>
           <td class="team-cell">
             ${flag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${flag}.png" alt="" />` : ""}
@@ -401,6 +404,14 @@ function applyMatchResultsToTeamStatus(matches) {
 
   advancingTeams = knockoutTeams; // lo usa la tabla de grupos para marcar terceros
 
+  // Equipos que YA aparecen en el cuadro de eliminación: aseguraron su pase
+  // (esto sí captura correctamente a los mejores terceros, porque la FIFA solo
+  // los coloca en el cuadro una vez resueltos todos los grupos).
+  knockoutTeams.forEach((name) => {
+    teamStatus[name] = teamStatus[name] || {};
+    teamStatus[name].advancing = true;
+  });
+
   // 2) Eliminados de la fase de grupos: cuando ya terminaron TODOS los partidos
   //    de grupos y el cuadro está armado, cualquier equipo de grupos que no
   //    aparezca en el cuadro quedó fuera (son los 16 que no avanzan en formato 48).
@@ -519,7 +530,7 @@ function analyzeGroupOutcomes(groupMatches) {
   });
 
   const res = {};
-  teams.forEach((t) => (res[t] = { top3: true, fourth: true }));
+  teams.forEach((t) => (res[t] = { top2: true, fourth: true }));
 
   enumerateOutcomes(remaining.length).forEach((combo) => {
     const all = played.concat(remaining.map((m, i) => ({ home: m.home, away: m.away, winner: combo[i] })));
@@ -535,7 +546,7 @@ function analyzeGroupOutcomes(groupMatches) {
       const best = pos;
       const worst = pos + block.length - 1;
       block.forEach((n) => {
-        if (worst > 3) res[n].top3 = false;   // podría caer fuera del top-3
+        if (worst > 2) res[n].top2 = false;   // podría caer fuera del top-2 (no asegurado)
         if (best < 4) res[n].fourth = false;  // podría salvarse del 4º
       });
       pos += block.length;
@@ -554,8 +565,11 @@ function computeGroupQualification(matches) {
     const r = analyzeGroupOutcomes(gm);
     Object.keys(r).forEach((name) => {
       teamStatus[name] = teamStatus[name] || {};
-      if (r[name].fourth) teamStatus[name].eliminated = true;   // 4º matemático: fuera
-      else if (r[name].top3) teamStatus[name].advancing = true; // asegurado en zona de 16avos
+      // Solo aseguran 16avos quienes ya garantizan top-2 (clasifican directo).
+      // El 3er lugar NO se marca: depende de ser uno de los 8 mejores terceros,
+      // que se define con resultados de otros grupos aún por jugarse.
+      if (r[name].fourth) teamStatus[name].eliminated = true;
+      else if (r[name].top2) teamStatus[name].advancing = true;
     });
   });
 }
