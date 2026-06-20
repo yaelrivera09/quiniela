@@ -170,12 +170,11 @@ function renderGroups(standings) {
         const flag = flagFor(row.team.name);
         const st = teamStatus[row.team.name] || {};
         const eliminated = !!st.eliminated;
-        // "secured" = ya aseguró su pase matemáticamente (top-2 o ya en el cuadro).
-        // "inZone" = hoy está en puesto de clasificación, pero aún no asegurado:
-        // se resalta en verde como referencia, pero SIN etiqueta para no afirmar de más.
+        // Solo se resalta en verde a quien YA aseguró su pase matemáticamente
+        // (top-2 o ya en el cuadro). Los que hoy están en zona pero todavía se
+        // pueden mover de posición NO se marcan.
         const secured = !eliminated && !!st.advancing;
-        const inZone = !eliminated && idx < 2;
-        const rowCls = eliminated ? "eliminated-row" : secured || inZone ? "qualified" : "";
+        const rowCls = eliminated ? "eliminated-row" : secured ? "qualified" : "";
         const tag = eliminated
           ? `<span class="grp-tag grp-tag-out">Eliminado</span>`
           : secured
