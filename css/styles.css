@@ -375,7 +375,23 @@ main {
 }
 
 .group-table tr.qualified td { background: var(--green-soft); }
-.group-table tr.eliminated-row td { color: var(--red); }
+.group-table tr.eliminated-row td { color: var(--red); background: var(--red-soft); }
+.group-table tr.eliminated-row .grp-team-name { text-decoration: line-through; opacity: 0.75; }
+
+.grp-tag {
+  display: inline-block;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: #fff;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.grp-tag-out { background: var(--red); }
+.grp-tag-in { background: var(--green); }
 
 .group-table img.flag-mini {
   width: 18px;

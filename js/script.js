@@ -4,6 +4,7 @@ let teamStatus = {};
 let liveMatchesCount = 0;
 let allMatches = [];
 let lastBets = [];
+let lastStandings = null; // última tabla de grupos recibida, para re-pintarla
 let advancingTeams = new Set(); // equipos que ya están en el cuadro de eliminación
 let currentBetTarget = null;
 let currentBetFrom = null;
@@ -114,7 +115,8 @@ async function loadStandings() {
       return true;
     }
     $("#api-warning").classList.add("hidden");
-    renderGroups(data.standings);
+    lastStandings = data.standings;
+    renderGroups(lastStandings);
     return true;
   } catch (e) {
     $("#api-warning").classList.remove("hidden");
@@ -166,15 +168,22 @@ function renderGroups(standings) {
     const rows = group.table
       .map((row, idx) => {
         const flag = flagFor(row.team.name);
+        const st = teamStatus[row.team.name] || {};
+        const eliminated = !!st.eliminated;
         // Los 2 primeros avanzan siempre; un 3º puede avanzar como mejor tercero
-        // (lo confirmamos si ya aparece en el cuadro de eliminación).
-        const qualified = idx < 2 || advancingTeams.has(row.team.name);
-        const eliminated = teamStatus[row.team.name] && teamStatus[row.team.name].eliminated;
+        // (lo confirmamos si ya está asegurado o ya aparece en el cuadro).
+        const qualified = !eliminated && (idx < 2 || st.advancing || advancingTeams.has(row.team.name));
+        const tag = eliminated
+          ? `<span class="grp-tag grp-tag-out">Eliminado</span>`
+          : qualified
+          ? `<span class="grp-tag grp-tag-in">16avos</span>`
+          : "";
         return `<tr class="${qualified ? "qualified" : ""} ${eliminated ? "eliminated-row" : ""}">
           <td>${row.position}</td>
           <td class="team-cell">
             ${flag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${flag}.png" alt="" />` : ""}
-            ${esNameFor(row.team.name)}
+            <span class="grp-team-name">${esNameFor(row.team.name)}</span>
+            ${tag}
           </td>
           <td>${row.playedGames}</td>
           <td>${row.won}</td>
@@ -234,6 +243,9 @@ async function loadMatches() {
     renderMatches(allMatches);
     applyMatchResultsToTeamStatus(allMatches);
     renderBracket(allMatches);
+    // Re-pintamos la tabla de grupos para reflejar clasificados/eliminados
+    // recién calculados a partir de los resultados de los partidos.
+    if (lastStandings) renderGroups(lastStandings);
     if (openPerson) openPersonModal(openPerson);
     if (lastBets.length) renderBets(lastBets);
     return true;
