@@ -67,6 +67,8 @@ html.standalone .tabs { padding-top: 16px; }
   border-radius: 999px;
   font-weight: 600;
   font-size: 0.8rem;
+  box-shadow: 0 4px 14px rgba(192,57,43,.14);
+  animation: live-pulse 1.8s infinite;
 }
 
 .hidden { display: none !important; }
@@ -130,6 +132,7 @@ html.standalone .tabs { padding-top: 16px; }
   background: var(--ink);
   color: #fff;
   border-color: var(--ink);
+  box-shadow: 0 4px 12px rgba(16,18,29,.18);
 }
 
 main {
@@ -154,12 +157,13 @@ main {
   border-radius: var(--radius);
   padding: 16px;
   cursor: pointer;
-  transition: border-color .15s, box-shadow .15s;
+  transition: border-color .18s, box-shadow .18s, transform .18s;
 }
 
 .person-card:hover {
   border-color: #c9cdd4;
-  box-shadow: 0 4px 16px rgba(0,0,0,.06);
+  box-shadow: 0 10px 28px rgba(16,18,29,.10);
+  transform: translateY(-3px);
 }
 
 .person-header {
@@ -172,11 +176,12 @@ main {
 }
 
 .person-photo {
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   object-fit: cover;
   background: var(--accent-soft);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--line);
 }
 
 .person-photo-fallback {
@@ -293,6 +298,23 @@ main {
   font-weight: 600;
 }
 
+.team-row.advancing {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.team-row.advancing::after {
+  content: "16avos";
+  margin-left: auto;
+  font-size: 0.62rem;
+  letter-spacing: 0.3px;
+  background: var(--green);
+  color: #fff;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
 /* ---- Grupos ---- */
 .api-warning {
   background: #fff8e6;
@@ -374,9 +396,18 @@ main {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 16px;
+  transition: box-shadow .18s, transform .18s;
 }
 
-.match-card.is-live { border-color: var(--red); }
+.match-card:hover {
+  box-shadow: 0 6px 18px rgba(16,18,29,.07);
+  transform: translateY(-2px);
+}
+
+.match-card.is-live {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px var(--red-soft), 0 6px 18px rgba(192,57,43,.10);
+}
 
 .match-header {
   display: flex;
@@ -514,9 +545,20 @@ footer {
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 8px 10px;
+  box-shadow: 0 2px 8px rgba(16,18,29,.04);
 }
 
-.bk-match.bk-live { border-color: var(--red); }
+.bk-match.bk-live {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px var(--red-soft);
+}
+
+.bk-win {
+  background: var(--green-soft);
+  border-radius: 6px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
 
 .bk-row {
   display: flex;

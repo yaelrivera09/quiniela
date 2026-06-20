@@ -54,6 +54,9 @@ function renderPeople() {
       (t) => !(teamStatus[t.en] && teamStatus[t.en].eliminated)
     ).length;
     const champion = person.teams.some((t) => teamStatus[t.en] && teamStatus[t.en].winner);
+    const qualifiedCount = person.teams.filter(
+      (t) => teamStatus[t.en] && teamStatus[t.en].advancing && !teamStatus[t.en].eliminated
+    ).length;
 
     const heartsHtml = person.teams
       .map((t) => {
@@ -73,7 +76,7 @@ function renderPeople() {
               champion
                 ? "🏆 ¡Tiene al campeón!"
                 : stillIn > 0
-                ? `${stillIn} de ${person.teams.length} equipos con vida`
+                ? `${stillIn} de ${person.teams.length} con vida${qualifiedCount > 0 ? ` · ${qualifiedCount} en 16avos` : ""}`
                 : "Sin equipos vivos"
             }</span>
             <span class="hearts">${heartsHtml}</span>
@@ -84,7 +87,7 @@ function renderPeople() {
         ${person.teams
           .map((t) => {
             const st = teamStatus[t.en] || {};
-            const cls = st.winner ? "winner" : st.eliminated ? "eliminated" : "";
+            const cls = st.winner ? "winner" : st.eliminated ? "eliminated" : st.advancing ? "advancing" : "";
             return `<div class="team-row ${cls}">
               <img class="flag" src="https://flagcdn.com/w40/${t.flag}.png" alt="${t.es}" />
               <span>${t.es}</span>
@@ -227,6 +230,7 @@ async function loadMatches() {
     }
     $("#matches-warning").classList.add("hidden");
     allMatches = data.matches;
+    computeGroupQualification(allMatches);
     renderMatches(allMatches);
     applyMatchResultsToTeamStatus(allMatches);
     renderBracket(allMatches);
@@ -435,6 +439,113 @@ function applyMatchResultsToTeamStatus(matches) {
   });
 
   renderPeople();
+}
+
+/* ---------- Clasificación / eliminación matemática (fase de grupos) ----------
+   Desempate oficial del Mundial 2026: PRIMERO el head-to-head (resultado entre
+   los equipos empatados), antes que la diferencia de goles general. Para saber
+   quién ya aseguró o ya no puede, probamos todos los resultados que faltan en
+   cada grupo y revisamos en qué posiciones puede terminar cada equipo. */
+function matchWinnerSide(m) {
+  const w = m.score?.winner;
+  if (w === "HOME_TEAM") return "home";
+  if (w === "AWAY_TEAM") return "away";
+  if (w === "DRAW") return "draw";
+  const h = m.score?.fullTime?.home;
+  const a = m.score?.fullTime?.away;
+  if (h != null && a != null) return h > a ? "home" : a > h ? "away" : "draw";
+  return null;
+}
+
+function enumerateOutcomes(n) {
+  if (n === 0) return [[]];
+  const out = [];
+  for (const sub of enumerateOutcomes(n - 1)) {
+    for (const o of ["home", "draw", "away"]) out.push([o, ...sub]);
+  }
+  return out;
+}
+
+// Ordena por puntos y, en empate, por el mini-torneo entre los empatados
+// (puntos head-to-head). Devuelve "bloques": un bloque con más de un equipo
+// es un empate que el head-to-head no resolvió (ahí ya dependería de la
+// diferencia de goles, que no simulamos: lo dejamos como incertidumbre).
+function rankByPointsAndH2H(teams, pts, results) {
+  const byPts = {};
+  teams.forEach((t) => { (byPts[pts[t]] = byPts[pts[t]] || []).push(t); });
+  const blocks = [];
+  Object.keys(byPts).map(Number).sort((a, b) => b - a).forEach((pv) => {
+    const tied = byPts[pv];
+    if (tied.length === 1) { blocks.push(tied); return; }
+    const mini = {};
+    tied.forEach((t) => (mini[t] = 0));
+    results.forEach((m) => {
+      if (tied.includes(m.home) && tied.includes(m.away)) {
+        if (m.winner === "home") mini[m.home] += 3;
+        else if (m.winner === "away") mini[m.away] += 3;
+        else { mini[m.home] += 1; mini[m.away] += 1; }
+      }
+    });
+    const byMini = {};
+    tied.forEach((t) => { (byMini[mini[t]] = byMini[mini[t]] || []).push(t); });
+    Object.keys(byMini).map(Number).sort((a, b) => b - a).forEach((mv) => blocks.push(byMini[mv]));
+  });
+  return blocks;
+}
+
+function analyzeGroupOutcomes(groupMatches) {
+  const teams = [...new Set(groupMatches.flatMap((m) => [m.homeTeam?.name, m.awayTeam?.name]))].filter(Boolean);
+  const played = [];
+  const remaining = [];
+  groupMatches.forEach((m) => {
+    const w = matchWinnerSide(m);
+    if (m.status === "FINISHED" && w) {
+      played.push({ home: m.homeTeam.name, away: m.awayTeam.name, winner: w });
+    } else if (m.homeTeam?.name && m.awayTeam?.name) {
+      remaining.push({ home: m.homeTeam.name, away: m.awayTeam.name });
+    }
+  });
+
+  const res = {};
+  teams.forEach((t) => (res[t] = { top3: true, fourth: true }));
+
+  enumerateOutcomes(remaining.length).forEach((combo) => {
+    const all = played.concat(remaining.map((m, i) => ({ home: m.home, away: m.away, winner: combo[i] })));
+    const pts = {};
+    teams.forEach((t) => (pts[t] = 0));
+    all.forEach((m) => {
+      if (m.winner === "home") pts[m.home] += 3;
+      else if (m.winner === "away") pts[m.away] += 3;
+      else { pts[m.home] += 1; pts[m.away] += 1; }
+    });
+    let pos = 1;
+    rankByPointsAndH2H(teams, pts, all).forEach((block) => {
+      const best = pos;
+      const worst = pos + block.length - 1;
+      block.forEach((n) => {
+        if (worst > 3) res[n].top3 = false;   // podría caer fuera del top-3
+        if (best < 4) res[n].fourth = false;  // podría salvarse del 4º
+      });
+      pos += block.length;
+    });
+  });
+  return res;
+}
+
+function computeGroupQualification(matches) {
+  const groupMatches = matches.filter((m) => m.stage === "GROUP_STAGE" && m.group);
+  if (groupMatches.length === 0) return;
+  const groups = {};
+  groupMatches.forEach((m) => { (groups[m.group] = groups[m.group] || []).push(m); });
+
+  Object.values(groups).forEach((gm) => {
+    const r = analyzeGroupOutcomes(gm);
+    Object.keys(r).forEach((name) => {
+      teamStatus[name] = teamStatus[name] || {};
+      if (r[name].fourth) teamStatus[name].eliminated = true;   // 4º matemático: fuera
+      else if (r[name].top3) teamStatus[name].advancing = true; // asegurado en zona de 16avos
+    });
+  });
 }
 
 /* ---------- Llaves (cuadro de eliminación) ---------- */
