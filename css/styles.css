@@ -829,8 +829,10 @@ body.modal-open {
 .bet-card-meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .bet-status {
@@ -843,6 +845,7 @@ body.modal-open {
 
 .bet-status.pendiente { background: #fff8e6; color: #6a5200; }
 .bet-status.aceptada { background: var(--green-soft); color: var(--green); }
+.bet-status.rechazada { background: var(--red-soft); color: var(--red); }
 
 .bet-accept-btn {
   background: var(--ink);
@@ -855,6 +858,20 @@ body.modal-open {
   cursor: pointer;
   white-space: nowrap;
 }
+
+.bet-reject-btn {
+  background: transparent;
+  color: var(--red);
+  border: 1px solid var(--red);
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bet-reject-btn:hover { background: var(--red-soft); }
 
 .bet-delete-btn {
   background: transparent;

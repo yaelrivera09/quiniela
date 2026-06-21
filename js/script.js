@@ -953,8 +953,15 @@ function renderBets(bets) {
         ${betResultHtml(bet)}
       </div>
       <div class="bet-card-meta">
-        <span class="bet-status ${bet.status}">${bet.status === "aceptada" ? "Aceptada" : "Pendiente"}</span>
-        ${bet.status === "pendiente" ? `<button class="bet-accept-btn" data-id="${bet.id}">Aceptar</button>` : ""}
+        <span class="bet-status ${bet.status}">${
+          bet.status === "aceptada" ? "Aceptada" : bet.status === "rechazada" ? "Rechazada" : "Pendiente"
+        }</span>
+        ${
+          bet.status === "pendiente"
+            ? `<button class="bet-accept-btn" data-id="${bet.id}">Aceptar</button>
+               <button class="bet-reject-btn" data-id="${bet.id}">Rechazar</button>`
+            : ""
+        }
         <button class="bet-delete-btn" data-id="${bet.id}" title="Eliminar">✕</button>
       </div>
     `;
@@ -963,6 +970,9 @@ function renderBets(bets) {
 
   list.querySelectorAll(".bet-accept-btn").forEach((btn) => {
     btn.addEventListener("click", () => acceptBet(btn.dataset.id));
+  });
+  list.querySelectorAll(".bet-reject-btn").forEach((btn) => {
+    btn.addEventListener("click", () => rejectBet(btn.dataset.id));
   });
   list.querySelectorAll(".bet-delete-btn").forEach((btn) => {
     btn.addEventListener("click", () => deleteBet(btn.dataset.id));
@@ -995,6 +1005,22 @@ async function acceptBet(id) {
     loadBets();
   } catch (e) {
     alert("No se pudo aceptar la apuesta. Intenta de nuevo.");
+  }
+}
+
+async function rejectBet(id) {
+  if (!confirm("¿Rechazar esta apuesta?")) return;
+  try {
+    const res = await fetch("/api/bets/reject", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    loadBets();
+  } catch (e) {
+    alert("No se pudo rechazar la apuesta. Intenta de nuevo.");
   }
 }
 
