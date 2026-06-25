@@ -628,6 +628,27 @@ function renderBracket(matches) {
   const info = $("#bracket-info");
   if (!wrap) return;
 
+  // Mientras la FIFA no asigne los equipos al cuadro (pasa al terminar la fase
+  // de grupos), mostramos un mensaje claro en vez de una pared de "Por definir".
+  const anyDefined = matches.some(
+    (m) => m.stage && m.stage !== "GROUP_STAGE" && (m.homeTeam?.name || m.awayTeam?.name)
+  );
+  if (!anyDefined) {
+    info.classList.add("hidden");
+    wrap.innerHTML = `
+      <div class="bracket-placeholder">
+        <div class="bracket-placeholder-icon">🏟️</div>
+        <h3>El cuadro aún no se define</h3>
+        <p>Los 32 clasificados y sus cruces (Dieciseisavos → Final) se asignan
+        cuando termina la fase de grupos. En cuanto eso pase, aquí aparecerá el
+        cuadro completo con banderas, dueños y marcadores, y se irá actualizando
+        solo con cada resultado.</p>
+      </div>`;
+    return;
+  }
+
+  info.classList.add("hidden");
+
   const cols = BRACKET_ROUNDS.map(([stage, label]) => {
     const ms = matches
       .filter((m) => m.stage === stage)
@@ -651,12 +672,6 @@ function renderBracket(matches) {
   }
 
   wrap.innerHTML = cols.join("");
-
-  // Aviso mientras el cuadro aún no tiene equipos definidos.
-  const anyDefined = matches.some(
-    (m) => m.stage && m.stage !== "GROUP_STAGE" && (m.homeTeam?.name || m.awayTeam?.name)
-  );
-  info.classList.toggle("hidden", anyDefined);
 }
 
 /* ---------- Modal de participante ---------- */
