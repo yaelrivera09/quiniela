@@ -14,6 +14,29 @@ let currentBetAwayEn = "";
 
 const SITE_URL = "https://quiniela-drab-ten.vercel.app";
 
+// Debe coincidir con el ?v= de index.html. Sirve para detectar si el navegador
+// (o el acceso directo de iOS) está corriendo una versión vieja en caché.
+const APP_VERSION = "20260618l";
+
+// Auto-actualización: pide el index.html fresco (sin caché), lee qué versión
+// debería estar corriendo y, si la que tenemos cargada es vieja, recarga a una
+// URL con parámetro nuevo para forzar que el navegador baje la versión actual.
+// Un guard en sessionStorage evita recargas en bucle.
+async function checkForUpdate() {
+  try {
+    const res = await fetch("/?_=" + Date.now(), { cache: "no-store" });
+    const html = await res.text();
+    const m = html.match(/script\.js\?v=([0-9a-z]+)/);
+    const latest = m && m[1];
+    if (latest && latest !== APP_VERSION && sessionStorage.getItem("qreload") !== latest) {
+      sessionStorage.setItem("qreload", latest);
+      location.replace(location.pathname + "?u=" + latest);
+    }
+  } catch (e) {
+    /* sin conexión: seguimos con lo que haya */
+  }
+}
+
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
@@ -241,6 +264,7 @@ async function loadMatches() {
     }
     $("#matches-warning").classList.add("hidden");
     allMatches = data.matches;
+    stabilizeBracket(allMatches); // conserva equipos de llaves aunque la API los pierda
     computeGroupQualification(allMatches);
     renderMatches(allMatches);
     applyMatchResultsToTeamStatus(allMatches);
@@ -582,6 +606,45 @@ const BRACKET_ROUNDS = [
   ["FINAL", "Final"],
 ];
 
+// La fuente de datos (football-data.org) a veces "pierde" temporalmente los
+// equipos ya asignados a las llaves: los devuelve en null y luego otra vez con
+// nombre, lo que hacía parpadear el cuadro. Recordamos el último equipo conocido
+// de cada cruce (en localStorage) y lo conservamos si la API lo manda vacío.
+function stabilizeBracket(matches) {
+  let mem = {};
+  try {
+    mem = JSON.parse(localStorage.getItem("bracketMem") || "{}");
+  } catch (e) {
+    mem = {};
+  }
+  let changed = false;
+  matches.forEach((m) => {
+    if (!m.stage || m.stage === "GROUP_STAGE") return;
+    const prev = mem[m.id];
+    if (prev) {
+      if (!m.homeTeam?.name && prev.home) m.homeTeam = prev.home;
+      if (!m.awayTeam?.name && prev.away) m.awayTeam = prev.away;
+    }
+    if (m.homeTeam?.name || m.awayTeam?.name) {
+      const entry = {
+        home: m.homeTeam?.name ? m.homeTeam : prev?.home || null,
+        away: m.awayTeam?.name ? m.awayTeam : prev?.away || null,
+      };
+      if (JSON.stringify(mem[m.id]) !== JSON.stringify(entry)) {
+        mem[m.id] = entry;
+        changed = true;
+      }
+    }
+  });
+  if (changed) {
+    try {
+      localStorage.setItem("bracketMem", JSON.stringify(mem));
+    } catch (e) {
+      /* almacenamiento lleno o no disponible: seguimos sin persistir */
+    }
+  }
+}
+
 function bracketWinnerSide(m) {
   // Devuelve "home" | "away" | null según quién ganó (considera penales).
   if (m.status !== "FINISHED") return null;
@@ -654,12 +717,11 @@ function renderBracket(matches) {
 
   wrap.innerHTML = cols.join("");
 
-  // El calendario de llaves ya está fijo; los equipos se asignan al terminar
-  // los grupos. Mostramos el aviso solo mientras no haya equipos definidos.
-  const anyDefined = matches.some(
-    (m) => m.stage && m.stage !== "GROUP_STAGE" && (m.homeTeam?.name || m.awayTeam?.name)
-  );
-  info.classList.toggle("hidden", anyDefined);
+  // El aviso ("los equipos se van asignando…") se mantiene mientras el cuadro
+  // siga incompleto, y desaparece solo cuando TODOS los cruces tengan equipos.
+  const ko = matches.filter((m) => m.stage && m.stage !== "GROUP_STAGE");
+  const allDefined = ko.length > 0 && ko.every((m) => m.homeTeam?.name && m.awayTeam?.name);
+  info.classList.toggle("hidden", allDefined);
 }
 
 /* ---------- Modal de participante ---------- */
@@ -1157,6 +1219,7 @@ function detectStandalone() {
 }
 
 function init() {
+  checkForUpdate(); // si hay versión nueva, recarga sola a la última
   detectStandalone();
   initTabs();
   initModal();
