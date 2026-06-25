@@ -611,7 +611,9 @@ function bracketMatchHtml(m) {
   const a = m.score?.fullTime?.away;
   const hasScore = h != null && a != null;
   const isLive = m.status === "IN_PLAY" || m.status === "PAUSED";
+  const dateLabel = m.utcDate ? `${formatDate(m.utcDate)} · ${formatTime(m.utcDate)}` : "";
   return `<div class="bk-match ${isLive ? "bk-live" : ""}">
+    ${dateLabel ? `<div class="bk-date">${dateLabel}</div>` : ""}
     <div class="bk-row">
       ${bracketTeamHtml(m.homeTeam, win === "home")}
       <span class="bk-score">${hasScore ? h : ""}</span>
@@ -627,27 +629,6 @@ function renderBracket(matches) {
   const wrap = $("#bracket");
   const info = $("#bracket-info");
   if (!wrap) return;
-
-  // Mientras la FIFA no asigne los equipos al cuadro (pasa al terminar la fase
-  // de grupos), mostramos un mensaje claro en vez de una pared de "Por definir".
-  const anyDefined = matches.some(
-    (m) => m.stage && m.stage !== "GROUP_STAGE" && (m.homeTeam?.name || m.awayTeam?.name)
-  );
-  if (!anyDefined) {
-    info.classList.add("hidden");
-    wrap.innerHTML = `
-      <div class="bracket-placeholder">
-        <div class="bracket-placeholder-icon">🏟️</div>
-        <h3>El cuadro aún no se define</h3>
-        <p>Los 32 clasificados y sus cruces (Dieciseisavos → Final) se asignan
-        cuando termina la fase de grupos. En cuanto eso pase, aquí aparecerá el
-        cuadro completo con banderas, dueños y marcadores, y se irá actualizando
-        solo con cada resultado.</p>
-      </div>`;
-    return;
-  }
-
-  info.classList.add("hidden");
 
   const cols = BRACKET_ROUNDS.map(([stage, label]) => {
     const ms = matches
@@ -672,6 +653,13 @@ function renderBracket(matches) {
   }
 
   wrap.innerHTML = cols.join("");
+
+  // El calendario de llaves ya está fijo; los equipos se asignan al terminar
+  // los grupos. Mostramos el aviso solo mientras no haya equipos definidos.
+  const anyDefined = matches.some(
+    (m) => m.stage && m.stage !== "GROUP_STAGE" && (m.homeTeam?.name || m.awayTeam?.name)
+  );
+  info.classList.toggle("hidden", anyDefined);
 }
 
 /* ---------- Modal de participante ---------- */

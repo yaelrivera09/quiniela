@@ -569,6 +569,16 @@ footer {
   box-shadow: 0 0 0 1px var(--red-soft);
 }
 
+.bk-date {
+  font-size: 0.64rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 5px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
 .bk-win {
   background: var(--green-soft);
   border-radius: 6px;
