@@ -174,9 +174,76 @@ function ownerAvatarHtml(teamName) {
     onerror="this.outerHTML='<span class=\\'owner-avatar-fallback\\' title=\\'${owner.name}\\'>${initials(owner.name)}</span>'" />`;
 }
 
+// Marca como eliminado a un 3er lugar de grupo CERRADO que ya no puede entrar
+// al top-8 de mejores terceros (ej. Uruguay): se cuenta cuántos terceros le
+// ganan con seguridad (cerrados que ya lo superan + grupos abiertos cuyo 3o
+// tendrá más puntos pase lo que pase). Si son 8 o más, queda fuera.
+function markEliminatedThirds(standings) {
+  const groups = standings.filter((s) => s.type === "TOTAL" && s.group);
+  if (groups.length === 0 || allMatches.length === 0) return;
+
+  const letterOf = (g) => g.group.replace(/^GROUP_/, "").replace(/^Group\s*/i, "").trim();
+  const thirdOf = (g) => {
+    const t = [...g.table].sort((a, b) => a.position - b.position)[2];
+    return t ? { team: t.team.name, pts: t.points, dg: t.goalDifference, gf: t.goalsFor } : null;
+  };
+  const better = (x, y) => x.pts > y.pts || (x.pts === y.pts && (x.dg > y.dg || (x.dg === y.dg && x.gf > y.gf)));
+
+  const closed = {};
+  const remaining = {};
+  groups.forEach((g) => {
+    const L = letterOf(g);
+    const ms = allMatches.filter((m) => m.stage === "GROUP_STAGE" && m.group === "GROUP_" + L);
+    remaining[L] = ms.filter((m) => m.status !== "FINISHED").map((m) => ({ h: m.homeTeam?.name, a: m.awayTeam?.name })).filter((x) => x.h && x.a);
+    closed[L] = ms.length > 0 && ms.every((m) => m.status === "FINISHED");
+  });
+
+  // Puntos MÍNIMOS posibles del 3er lugar de un grupo abierto.
+  const minThirdPts = (g) => {
+    const rem = remaining[letterOf(g)];
+    const base = {};
+    g.table.forEach((r) => (base[r.team.name] = { pts: r.points, gf: r.goalsFor, ga: r.goalsAgainst }));
+    let min = Infinity;
+    (function go(i, state) {
+      if (i === rem.length) {
+        const arr = Object.values(state)
+          .map((s) => ({ pts: s.pts, dg: s.gf - s.ga, gf: s.gf }))
+          .sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf);
+        if (arr[2] && arr[2].pts < min) min = arr[2].pts;
+        return;
+      }
+      const { h, a } = rem[i];
+      for (const r of ["home", "draw", "away"]) {
+        const s = { ...state, [h]: { ...state[h] }, [a]: { ...state[a] } };
+        if (r === "home") { s[h].pts += 3; s[h].gf += 1; s[a].ga += 1; }
+        else if (r === "away") { s[a].pts += 3; s[a].gf += 1; s[h].ga += 1; }
+        else { s[h].pts += 1; s[a].pts += 1; }
+        go(i + 1, s);
+      }
+    })(0, base);
+    return min === Infinity ? 0 : min;
+  };
+
+  const closedThirds = groups.filter((g) => closed[letterOf(g)]).map((g) => ({ L: letterOf(g), ...thirdOf(g) })).filter((x) => x.team);
+  const openGroups = groups.filter((g) => !closed[letterOf(g)]);
+  const openMin = openGroups.map((g) => minThirdPts(g));
+
+  closedThirds.forEach((X) => {
+    let above = 0;
+    closedThirds.forEach((Y) => { if (Y.L !== X.L && better(Y, X)) above++; });
+    openMin.forEach((mp) => { if (mp > X.pts) above++; });
+    if (above >= 8) {
+      teamStatus[X.team] = teamStatus[X.team] || {};
+      teamStatus[X.team].eliminated = true;
+    }
+  });
+}
+
 function renderGroups(standings) {
   const grid = $("#groups-grid");
   grid.innerHTML = "";
+
+  markEliminatedThirds(standings);
 
   // football-data.org devuelve standings tipo TOTAL agrupados por "group" (GROUP_A, etc.)
   const groupStandings = standings.filter((s) => s.type === "TOTAL" && s.group);
@@ -402,14 +469,16 @@ function renderBestThirds(standings) {
   const items = thirds
     .map((t, i) => {
       const q = i < 8; // los 8 mejores clasifican
+      const elim = teamStatus[t.name] && teamStatus[t.name].eliminated;
       const dgStr = t.gd > 0 ? "+" + t.gd : "" + t.gd;
-      return `<div class="third-item ${q ? "is-in" : "is-out"}${i === 7 ? " is-cut" : ""}">
+      const cls = elim ? "is-elim" : q ? "is-in" : "is-out";
+      return `<div class="third-item ${cls}${i === 7 ? " is-cut" : ""}">
         <div class="third-head">
           <span class="third-pos">${i + 1}</span>
           ${teamBadgeImg({ name: t.name })}
           <span class="third-team">${esNameFor(t.name)}</span>
           <span class="third-grp">${t.group}</span>
-          ${ownerAvatarHtml(t.name)}
+          ${elim ? `<span class="third-elim-tag">Eliminado</span>` : ownerAvatarHtml(t.name)}
           <span class="third-pts"><strong>${t.pts}</strong> pts · ${dgStr} DG</span>
         </div>
         ${q ? `<div class="third-rival"><span class="third-rival-label">16avos</span>${rivalCell(t)}</div>` : ""}

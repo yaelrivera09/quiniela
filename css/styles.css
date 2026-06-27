@@ -411,6 +411,22 @@ main {
   opacity: 0.6;
 }
 
+.third-item.is-elim {
+  background: var(--red-soft);
+  border-color: #f0cfc9;
+}
+.third-item.is-elim .third-team { text-decoration: line-through; color: var(--red); }
+
+.third-elim-tag {
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--red);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
 .third-head {
   display: flex;
   align-items: center;
