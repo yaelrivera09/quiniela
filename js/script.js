@@ -1779,6 +1779,64 @@ function renderFeed() {
       .join("") || `<div class="matches-empty">Sin novedades por ahora.</div>`;
 }
 
+/* ---------- Goleadores ---------- */
+let lastScorers = [];
+
+async function loadScorers() {
+  try {
+    const res = await fetch("/api/scorers", { cache: "no-store" });
+    const data = await res.json();
+    if (data.error || !data.scorers) {
+      $("#scorers-warning").classList.remove("hidden");
+      return false;
+    }
+    $("#scorers-warning").classList.add("hidden");
+    lastScorers = data.scorers;
+    renderScorers(lastScorers);
+    return true;
+  } catch (e) {
+    $("#scorers-warning").classList.remove("hidden");
+    return false;
+  }
+}
+
+function renderScorers(scorers) {
+  const host = $("#scorers-list");
+  if (!host) return;
+  if (!scorers || scorers.length === 0) {
+    host.innerHTML = `<div class="matches-empty">Aún no hay goles registrados.</div>`;
+    return;
+  }
+
+  const medal = (i) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1);
+
+  const rows = scorers
+    .map((s, i) => {
+      const teamEn = s.team?.name;
+      const flag = teamEn ? flagFor(teamEn) : null;
+      const owner = teamEn ? ownerFor(teamEn) : null;
+      const teamEs = teamEn ? esNameFor(teamEn) : "";
+      return `<div class="scorer-row ${i === 0 ? "scorer-first" : ""}">
+        <span class="scorer-rank">${medal(i)}</span>
+        ${flag ? `<img class="scorer-flag" src="https://flagcdn.com/w40/${flag}.png" alt="" />`
+               : s.team?.crest ? `<img class="scorer-crest" src="${s.team.crest}" alt="" loading="lazy" />` : ""}
+        <div class="scorer-info">
+          <div class="scorer-name">${s.player?.name || "?"}</div>
+          <div class="scorer-team">${teamEs}${owner ? ` · <strong>${owner.name}</strong>` : ""}</div>
+        </div>
+        <span class="scorer-goals">${s.goals}<small>⚽</small></span>
+      </div>`;
+    })
+    .join("");
+
+  host.innerHTML = `
+    <div class="lb-card">
+      <h3 class="lb-title">⚽ Tabla de goleo</h3>
+      <p class="lb-note">Máximos goleadores del Mundial. El nombre en negrita es el dueño de ese equipo en la quiniela.</p>
+      <div class="scorer-rows">${rows}</div>
+    </div>`;
+}
+
 /* ---------- Tema claro/oscuro ---------- */
 function initTheme() {
   const btn = $("#theme-toggle");
@@ -1801,11 +1859,13 @@ const POLL = {
   matchesIdle: 45000,  // nada en vivo: con calma
   standings: 120000,   // la tabla cambia poco
   bets: 20000,         // apuestas
+  scorers: 90000,      // goleadores
 };
 
 let matchesTimer = null;
 let standingsTimer = null;
 let betsTimer = null;
+let scorersTimer = null;
 let refreshInFlight = false;
 
 function setLastUpdated(ok) {
@@ -1833,6 +1893,7 @@ async function refreshAll(manual) {
     loadMatches(),
     loadStandings(),
     loadBets(),
+    loadScorers(),
   ]);
   setLastUpdated(matchesOk);
 
@@ -1870,16 +1931,26 @@ function scheduleBets() {
   }, POLL.bets);
 }
 
+function scheduleScorers() {
+  clearTimeout(scorersTimer);
+  scorersTimer = setTimeout(async () => {
+    await loadScorers();
+    scheduleScorers();
+  }, POLL.scorers);
+}
+
 function startSchedules() {
   scheduleMatches();
   scheduleStandings();
   scheduleBets();
+  scheduleScorers();
 }
 
 function pauseSchedules() {
   clearTimeout(matchesTimer);
   clearTimeout(standingsTimer);
   clearTimeout(betsTimer);
+  clearTimeout(scorersTimer);
 }
 
 /* ---------- Init ---------- */
