@@ -374,6 +374,60 @@ main {
   font-weight: 600;
 }
 
+/* ---- Mejores terceros ---- */
+.thirds-wrap { margin-bottom: 16px; }
+
+.thirds-note {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.thirds-table td.thirds-team,
+.thirds-table td.thirds-rival {
+  text-align: left;
+}
+
+.thirds-table .thirds-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.thirds-name { white-space: nowrap; }
+
+.thirds-grp {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--muted);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.thirds-table .thirds-rival {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.thirds-table tr.thirds-in td { background: var(--green-soft); }
+.thirds-table tr.thirds-out td { color: var(--muted); }
+.thirds-table tr.thirds-cut td { border-bottom: 2px solid var(--ink); }
+
+.thirds-tbd { color: var(--muted); font-style: italic; font-size: 0.74rem; }
+
+.thirds-table .owner-avatar,
+.thirds-table .owner-avatar-fallback {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+}
+
+.thirds-table .bk-crest { width: 16px; height: 16px; }
+
 .group-table tr.qualified td { background: var(--green-soft); }
 .group-table tr.eliminated-row td { color: var(--red); background: var(--red-soft); }
 .group-table tr.eliminated-row .grp-team-name { text-decoration: line-through; opacity: 0.75; }

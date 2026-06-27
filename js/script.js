@@ -250,6 +250,93 @@ function renderGroups(standings) {
   // Reflejamos de inmediato cualquier eliminación recién detectada en las
   // tarjetas de participantes (corazones rotos).
   renderPeople();
+
+  renderBestThirds(standings);
+}
+
+/* ---------- Mejores terceros ---------- */
+// Busca el rival de 16avos de un equipo en el cuadro oficial (la API lo asigna
+// conforme se cierran los grupos). Devuelve el equipo rival o null.
+function findR32Opponent(teamName) {
+  for (const m of allMatches) {
+    if (m.stage !== "LAST_32") continue;
+    if (m.homeTeam?.name === teamName && m.awayTeam?.name) return m.awayTeam;
+    if (m.awayTeam?.name === teamName && m.homeTeam?.name) return m.homeTeam;
+  }
+  return null;
+}
+
+function teamBadgeImg(team) {
+  if (!team || !team.name) return "";
+  const flag = flagFor(team.name);
+  if (flag) return `<img class="flag-mini" src="https://flagcdn.com/w40/${flag}.png" alt="" />`;
+  if (team.crest) return `<img class="bk-crest" src="${team.crest}" alt="" loading="lazy" />`;
+  return "";
+}
+
+function renderBestThirds(standings) {
+  const host = $("#thirds-card");
+  if (!host) return;
+
+  const groups = (standings || []).filter((s) => s.type === "TOTAL" && s.group);
+  if (groups.length === 0) {
+    host.innerHTML = "";
+    return;
+  }
+
+  const thirds = [];
+  groups.forEach((g) => {
+    const sorted = [...g.table].sort((a, b) => a.position - b.position);
+    const t = sorted[2]; // 3er lugar
+    if (!t) return;
+    thirds.push({
+      group: g.group.replace(/^GROUP_/, "").replace(/^Group\s*/i, "").trim(),
+      name: t.team.name,
+      pts: t.points,
+      gd: t.goalDifference,
+      gf: t.goalsFor,
+      pj: t.playedGames,
+    });
+  });
+
+  // Criterio FIFA para terceros: puntos, luego diferencia de goles, luego goles.
+  thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+
+  const rows = thirds
+    .map((t, i) => {
+      const q = i < 8; // los 8 mejores clasifican
+      const owner = ownerFor(t.name);
+      const opp = findR32Opponent(t.name);
+      const oppHtml =
+        opp && opp.name
+          ? `${teamBadgeImg(opp)}<span>${esNameFor(opp.name)}</span>`
+          : `<span class="thirds-tbd">Por definir</span>`;
+      return `<tr class="${q ? "thirds-in" : "thirds-out"}${i === 7 ? " thirds-cut" : ""}">
+        <td>${i + 1}</td>
+        <td class="thirds-team">
+          ${teamBadgeImg({ name: t.name })}
+          <span class="thirds-name">${esNameFor(t.name)}</span>
+          <span class="thirds-grp">${t.group}</span>
+          ${ownerAvatarHtml(t.name)}
+        </td>
+        <td><strong>${t.pts}</strong></td>
+        <td>${t.gd > 0 ? "+" + t.gd : t.gd}</td>
+        <td class="thirds-rival">${oppHtml}</td>
+      </tr>`;
+    })
+    .join("");
+
+  host.innerHTML = `
+    <div class="group-card thirds-wrap">
+      <h3>Mejores terceros · clasifican 8</h3>
+      <p class="thirds-note">Orden: puntos → diferencia de goles → goles a favor. El rival de 16avos se confirma solo cuando la FIFA arma el cuadro al cerrar los grupos.</p>
+      <table class="group-table thirds-table">
+        <thead>
+          <tr><th>#</th><th style="text-align:left">Equipo</th><th>Pts</th><th>DG</th><th style="text-align:left">Rival 16avos</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
 /* ---------- Partidos ---------- */
