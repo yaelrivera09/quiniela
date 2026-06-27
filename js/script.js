@@ -980,14 +980,138 @@ function bracketMatchHtml(m, maps) {
   </div>`;
 }
 
+// Estructura oficial de 16avos en orden (Match 73-88). "3" = ese lado es un
+// tercero (el otro lado es el ganador del grupo indicado en el slot home).
+const R32_STRUCT = [
+  ["2A", "2B"], ["1E", "3"], ["1F", "2C"], ["1C", "2F"], ["1I", "3"], ["2E", "2I"],
+  ["1A", "3"], ["1L", "3"], ["1D", "3"], ["1G", "3"], ["2K", "2L"], ["1H", "2J"],
+  ["1B", "3"], ["1J", "2H"], ["1K", "3"], ["2D", "2G"],
+];
+
+// Contexto de terceros: ranking, ganador/tercero por grupo y, por cada grupo
+// ganador, qué terceros podría enfrentar (inverso de la proyección).
+function thirdsContext(standings, matches) {
+  const groups = (standings || []).filter((s) => s.type === "TOTAL" && s.group);
+  if (groups.length === 0) return null;
+  const letterOf = (g) => g.group.replace(/^GROUP_/, "").replace(/^Group\s*/i, "").trim();
+  const winnerByGroup = {};
+  const thirdByGroup = {};
+  const thirds = [];
+  groups.forEach((g) => {
+    const L = letterOf(g);
+    const s = [...g.table].sort((a, b) => a.position - b.position);
+    if (s[0]) winnerByGroup[L] = s[0].team;
+    if (s[2]) {
+      thirdByGroup[L] = s[2].team;
+      thirds.push({ group: L, name: s[2].team.name, pts: s[2].points, dg: s[2].goalDifference, gf: s[2].goalsFor });
+    }
+  });
+  thirds.sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf);
+  const top8 = thirds.slice(0, 8).map((t) => t.group);
+
+  const winnerGroupOf = (name) => Object.keys(winnerByGroup).find((L) => winnerByGroup[L] && winnerByGroup[L].name === name);
+  const fixed = {};
+  top8.forEach((g) => {
+    const tn = thirdByGroup[g] && thirdByGroup[g].name;
+    const opp = tn ? findR32Opponent(tn) : null;
+    const wg = opp && opp.name ? winnerGroupOf(opp.name) : null;
+    if (wg) fixed[g] = wg;
+  });
+  const projection = projectThirdOpponents(top8, fixed);
+  const possibleThirds = {};
+  top8.forEach((g) => (projection[g] || []).forEach((wl) => { (possibleThirds[wl] = possibleThirds[wl] || []).push(g); }));
+
+  return { thirds, top8, winnerByGroup, thirdByGroup, possibleThirds };
+}
+
+// Arma los 16 cruces de 16avos desde la estructura + posiciones actuales,
+// enlazando con el partido real de la API (para fecha/marcador) por equipo.
+function buildProjectedR32(standings, matches) {
+  if (!standings) return null;
+  const maps = buildR32SlotMaps(standings, matches);
+  const tc = thirdsContext(standings, matches);
+  const apiByTeam = {};
+  matches.filter((m) => m.stage === "LAST_32").forEach((m) => {
+    if (m.homeTeam?.name) apiByTeam[m.homeTeam.name] = m;
+    if (m.awayTeam?.name) apiByTeam[m.awayTeam.name] = m;
+  });
+  // "proyectado" = lo deducimos nosotros porque la API aún no lo colocó.
+  const resolveWR = (slot) => {
+    const team = maps.slotToTeam[slot];
+    if (!team) return { team: null };
+    return { team, projected: !apiByTeam[team.name] };
+  };
+  return R32_STRUCT.map(([hs, as]) => {
+    const home = resolveWR(hs);
+    let away;
+    if (as === "3") {
+      const wg = hs[1];
+      const opts = (tc && tc.possibleThirds[wg]) || [];
+      if (opts.length === 1 && tc.thirdByGroup[opts[0]]) {
+        const team = tc.thirdByGroup[opts[0]];
+        away = { team, projected: !apiByTeam[team.name] };
+      } else if (opts.length > 1) {
+        away = { team: null, ambiguous: opts.length };
+      } else {
+        away = { team: null };
+      }
+    } else {
+      away = resolveWR(as);
+    }
+    const apiMatch = (home.team && apiByTeam[home.team.name]) || (away.team && apiByTeam[away.team.name]) || null;
+    return { home, away, apiMatch };
+  }).sort((a, b) => {
+    const da = a.apiMatch ? new Date(a.apiMatch.utcDate) : Infinity;
+    const db = b.apiMatch ? new Date(b.apiMatch.utcDate) : Infinity;
+    return da - db;
+  });
+}
+
+function projTeamHtml(side, isWinner) {
+  if (side.team) return bracketTeamHtml(side.team, isWinner, side.projected);
+  if (side.ambiguous) return `<div class="bk-team bk-tbd"><span>${side.ambiguous} posibles 3º</span></div>`;
+  return `<div class="bk-team bk-tbd"><span>Por definir</span></div>`;
+}
+
+function projMatchHtml(d) {
+  const m = d.apiMatch;
+  const isLive = m && (m.status === "IN_PLAY" || m.status === "PAUSED");
+  const dateLabel = m && m.utcDate ? `${formatDate(m.utcDate)} · ${formatTime(m.utcDate)}` : "";
+  const h = m?.score?.fullTime?.home;
+  const a = m?.score?.fullTime?.away;
+  const hasScore = h != null && a != null;
+  const win = m ? bracketWinnerSide(m) : null;
+  const winnerName = win === "home" ? m?.homeTeam?.name : win === "away" ? m?.awayTeam?.name : null;
+  const homeWin = !!(winnerName && d.home.team && winnerName === d.home.team.name);
+  const awayWin = !!(winnerName && d.away.team && winnerName === d.away.team.name);
+  let hScore = "", aScore = "";
+  if (hasScore && m) {
+    const homeIsApiHome = d.home.team && m.homeTeam?.name === d.home.team.name;
+    hScore = homeIsApiHome ? h : a;
+    aScore = homeIsApiHome ? a : h;
+  }
+  return `<div class="bk-match ${isLive ? "bk-live" : ""}">
+    ${dateLabel ? `<div class="bk-date">${dateLabel}</div>` : ""}
+    <div class="bk-row">${projTeamHtml(d.home, homeWin)}<span class="bk-score">${hasScore ? hScore : ""}</span></div>
+    <div class="bk-row">${projTeamHtml(d.away, awayWin)}<span class="bk-score">${hasScore ? aScore : ""}</span></div>
+  </div>`;
+}
+
 function renderBracket(matches) {
   const wrap = $("#bracket");
   const info = $("#bracket-info");
   if (!wrap) return;
 
   const maps = buildR32SlotMaps(lastStandings, matches);
+  const proj = buildProjectedR32(lastStandings, matches);
 
   const cols = BRACKET_ROUNDS.map(([stage, label]) => {
+    if (stage === "LAST_32" && proj) {
+      return `<div class="bk-col">
+        <div class="bk-col-title">${label}</div>
+        ${proj.map(projMatchHtml).join("")}
+      </div>`;
+    }
     const ms = matches
       .filter((m) => m.stage === stage)
       .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
