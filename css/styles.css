@@ -374,75 +374,155 @@ main {
   font-weight: 600;
 }
 
-/* ---- Mejores terceros ---- */
+/* ---- Mejores terceros (tarjetas, responsivo) ---- */
 .thirds-wrap { margin-bottom: 16px; }
+
+.thirds-title { margin: 0 0 6px; font-size: 1rem; font-weight: 700; }
+.thirds-title span { color: var(--muted); font-weight: 600; font-size: 0.82rem; }
 
 .thirds-note {
   font-size: 0.72rem;
   color: var(--muted);
-  margin: 0 0 10px;
-  line-height: 1.4;
+  margin: 0 0 12px;
+  line-height: 1.45;
 }
 
-.thirds-table td.thirds-team,
-.thirds-table td.thirds-rival {
-  text-align: left;
+.thirds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.thirds-table .thirds-team {
+.third-item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 11px;
+  background: var(--card);
+}
+
+.third-item.is-in {
+  background: var(--green-soft);
+  border-color: #cdeadb;
+}
+
+.third-item.is-cut { margin-bottom: 6px; }
+
+.third-item.is-out {
+  opacity: 0.6;
+}
+
+.third-head {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-weight: 600;
+  gap: 8px;
+  min-width: 0;
 }
 
-.thirds-name { white-space: nowrap; }
+.third-pos {
+  width: 20px;
+  min-width: 20px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
 
-.thirds-grp {
-  font-size: 0.6rem;
+.third-head .flag-mini,
+.third-head .bk-crest {
+  width: 22px;
+  height: 16px;
+  min-width: 22px;
+}
+.third-head .bk-crest { height: 18px; object-fit: contain; }
+
+.third-team {
+  font-weight: 700;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.third-grp {
+  font-size: 0.58rem;
   font-weight: 700;
   color: #fff;
   background: var(--muted);
   border-radius: 4px;
   padding: 1px 5px;
+  min-width: 16px;
+  text-align: center;
 }
 
-.thirds-table .thirds-rival {
+.third-head .owner-avatar,
+.third-head .owner-avatar-fallback {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+}
+
+.third-pts {
+  margin-left: auto;
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+  font-weight: 600;
+}
+.third-pts strong { color: var(--ink); font-size: 0.85rem; }
+
+.third-rival {
   display: flex;
   align-items: center;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 0.84rem;
+  font-weight: 600;
 }
 
-.thirds-table tr.thirds-in td { background: var(--green-soft); }
-.thirds-table tr.thirds-out td { color: var(--muted); }
-.thirds-table tr.thirds-cut td { border-bottom: 2px solid var(--ink); }
+.third-rival .flag-mini,
+.third-rival .bk-crest {
+  width: 20px;
+  height: 14px;
+  min-width: 20px;
+}
+.third-rival .bk-crest { height: 16px; object-fit: contain; }
 
-.thirds-tbd { color: var(--muted); font-style: italic; font-size: 0.74rem; }
+.third-rival-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  font-weight: 700;
+}
 
-.thirds-table .thirds-rival { flex-wrap: wrap; }
+.thirds-tbd { color: var(--muted); font-style: italic; font-size: 0.78rem; font-weight: 500; }
 
 .rival-tag {
   font-size: 0.56rem;
   font-weight: 700;
-  padding: 1px 5px;
+  padding: 1px 6px;
   border-radius: 999px;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 .rival-ok { background: var(--green); color: #fff; }
-.rival-proj { background: var(--accent-soft); color: var(--muted); }
+.rival-proj { background: #e7e8ec; color: var(--muted); }
 
-.rival-range { display: inline-flex; align-items: center; gap: 3px; flex-wrap: wrap; }
-.rival-opt { display: inline-flex; opacity: 0.9; }
-.rival-count { font-size: 0.62rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
-
-.thirds-table .owner-avatar,
-.thirds-table .owner-avatar-fallback {
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
+.rival-range { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.rival-opt { display: inline-flex; }
+.rival-count {
+  font-size: 0.62rem;
+  color: var(--muted);
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--accent-soft);
+  padding: 1px 7px;
+  border-radius: 999px;
 }
-
-.thirds-table .bk-crest { width: 16px; height: 16px; }
 
 .group-table tr.qualified td { background: var(--green-soft); }
 .group-table tr.eliminated-row td { color: var(--red); background: var(--red-soft); }

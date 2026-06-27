@@ -380,21 +380,18 @@ function renderBestThirds(standings) {
   });
   const projection = projectThirdOpponents(top8Groups, fixed);
 
-  const rivalCell = (t, i, q) => {
-    if (!q) return ""; // los que no clasifican no tienen rival
+  const rivalCell = (t) => {
     // 1) Si la API ya fijó el cruce, lo mostramos como confirmado.
     const locked = findR32Opponent(t.name);
     if (locked && locked.name) {
-      return `${teamBadgeImg(locked)}<span class="thirds-name">${esNameFor(locked.name)}</span>
-        <span class="rival-tag rival-ok" title="Confirmado por el cuadro oficial">✓</span>`;
+      return `<span class="rival-tag rival-ok">✓ va vs</span>${teamBadgeImg(locked)}<span>${esNameFor(locked.name)}</span>`;
     }
     // 2) Si no, mostramos los posibles rivales (ganadores) según la estructura.
     const slots = projection[t.group] || [];
     const teams = slots.map((s) => winnerByGroup[s]).filter(Boolean);
     if (teams.length === 0) return `<span class="thirds-tbd">Por definir</span>`;
     if (teams.length === 1) {
-      return `${teamBadgeImg(teams[0])}<span class="thirds-name">${esNameFor(teams[0].name)}</span>
-        <span class="rival-tag rival-proj" title="Único posible según la estructura">proyectado</span>`;
+      return `${teamBadgeImg(teams[0])}<span>${esNameFor(teams[0].name)}</span><span class="rival-tag rival-proj" title="Único posible según la estructura">proyectado</span>`;
     }
     const flags = teams
       .map((w) => `<span class="rival-opt" title="${esNameFor(w.name)}">${teamBadgeImg(w)}</span>`)
@@ -402,34 +399,29 @@ function renderBestThirds(standings) {
     return `<span class="rival-range">${flags}</span><span class="rival-count">${teams.length} posibles</span>`;
   };
 
-  const rows = thirds
+  const items = thirds
     .map((t, i) => {
       const q = i < 8; // los 8 mejores clasifican
-      return `<tr class="${q ? "thirds-in" : "thirds-out"}${i === 7 ? " thirds-cut" : ""}">
-        <td>${i + 1}</td>
-        <td class="thirds-team">
+      const dgStr = t.gd > 0 ? "+" + t.gd : "" + t.gd;
+      return `<div class="third-item ${q ? "is-in" : "is-out"}${i === 7 ? " is-cut" : ""}">
+        <div class="third-head">
+          <span class="third-pos">${i + 1}</span>
           ${teamBadgeImg({ name: t.name })}
-          <span class="thirds-name">${esNameFor(t.name)}</span>
-          <span class="thirds-grp">${t.group}</span>
+          <span class="third-team">${esNameFor(t.name)}</span>
+          <span class="third-grp">${t.group}</span>
           ${ownerAvatarHtml(t.name)}
-        </td>
-        <td><strong>${t.pts}</strong></td>
-        <td>${t.gd > 0 ? "+" + t.gd : t.gd}</td>
-        <td class="thirds-rival">${rivalCell(t, i, q)}</td>
-      </tr>`;
+          <span class="third-pts"><strong>${t.pts}</strong> pts · ${dgStr} DG</span>
+        </div>
+        ${q ? `<div class="third-rival"><span class="third-rival-label">16avos</span>${rivalCell(t)}</div>` : ""}
+      </div>`;
     })
     .join("");
 
   host.innerHTML = `
     <div class="group-card thirds-wrap">
-      <h3>Mejores terceros · clasifican 8</h3>
-      <p class="thirds-note">Orden: puntos → dif. de goles → goles. <strong>Rival 16avos</strong>: ✓ = ya confirmado por el cuadro oficial; si no, son los <strong>posibles rivales</strong> según la estructura oficial (se van reduciendo en tiempo real conforme cierran los grupos). El cruce exacto lo fija la tabla privada de FIFA al terminar la fase de grupos.</p>
-      <table class="group-table thirds-table">
-        <thead>
-          <tr><th>#</th><th style="text-align:left">Equipo</th><th>Pts</th><th>DG</th><th style="text-align:left">Rival 16avos</th></tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+      <h3 class="thirds-title">Mejores terceros <span>· clasifican 8</span></h3>
+      <p class="thirds-note">Orden: puntos → dif. de goles → goles. <strong>Rival de 16avos</strong>: ✓ = ya confirmado por el cuadro oficial; si no, son los <strong>posibles rivales</strong> según la estructura oficial, que se van reduciendo en vivo conforme cierran los grupos.</p>
+      <div class="thirds-list">${items}</div>
     </div>`;
 }
 
