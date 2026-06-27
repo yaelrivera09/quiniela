@@ -419,6 +419,22 @@ main {
 
 .thirds-tbd { color: var(--muted); font-style: italic; font-size: 0.74rem; }
 
+.thirds-table .thirds-rival { flex-wrap: wrap; }
+
+.rival-tag {
+  font-size: 0.56rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.rival-ok { background: var(--green); color: #fff; }
+.rival-proj { background: var(--accent-soft); color: var(--muted); }
+
+.rival-range { display: inline-flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.rival-opt { display: inline-flex; opacity: 0.9; }
+.rival-count { font-size: 0.62rem; color: var(--muted); font-weight: 600; white-space: nowrap; }
+
 .thirds-table .owner-avatar,
 .thirds-table .owner-avatar-fallback {
   width: 18px;

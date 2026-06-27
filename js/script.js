@@ -274,6 +274,64 @@ function teamBadgeImg(team) {
   return "";
 }
 
+// Estructura OFICIAL del Round of 32 2026 (validada contra los cruces que la
+// API ya confirmó): cada ganador de grupo enfrenta al 3er lugar de uno de estos
+// grupos. A qué tercero exacto le toca cada ganador lo define la tabla privada
+// de 495 combinaciones de la FIFA; con la estructura solo podemos acotar el
+// CONJUNTO de posibles rivales (que se reduce conforme cierran los grupos).
+const R32_THIRD_SLOTS = {
+  E: ["A", "B", "C", "D", "F"],
+  I: ["C", "D", "F", "G", "H"],
+  A: ["C", "E", "F", "H", "I"],
+  L: ["E", "H", "I", "J", "K"],
+  D: ["B", "E", "F", "I", "J"],
+  G: ["A", "E", "H", "I", "J"],
+  B: ["E", "F", "G", "I", "J"],
+  K: ["D", "E", "I", "J", "L"],
+};
+
+// ¿Existe un emparejamiento completo (cada tercero a un slot permitido)?
+function thirdsHavePerfectMatching(qualGroups, forced) {
+  const slots = Object.keys(R32_THIRD_SLOTS);
+  let found = false;
+  (function bt(i, used) {
+    if (found) return;
+    if (i === qualGroups.length) { found = true; return; }
+    const g = qualGroups[i];
+    if (forced[g]) {
+      const s = forced[g];
+      if (!used.has(s) && R32_THIRD_SLOTS[s] && R32_THIRD_SLOTS[s].includes(g)) {
+        used.add(s); bt(i + 1, used); used.delete(s);
+      }
+      return;
+    }
+    for (const s of slots) {
+      if (used.has(s)) continue;
+      if (R32_THIRD_SLOTS[s].includes(g)) {
+        used.add(s); bt(i + 1, used); used.delete(s);
+        if (found) return;
+      }
+    }
+  })(0, new Set());
+  return found;
+}
+
+// Para cada grupo-tercero clasificado, el conjunto de grupos-ganador que podría
+// enfrentar. `fixed` son asignaciones ya confirmadas por la API (las respeta).
+function projectThirdOpponents(qualGroups, fixed) {
+  const res = {};
+  qualGroups.forEach((g) => {
+    const opts = [];
+    for (const s of Object.keys(R32_THIRD_SLOTS)) {
+      if (!R32_THIRD_SLOTS[s].includes(g)) continue;
+      if (fixed[g] && fixed[g] !== s) continue;
+      if (thirdsHavePerfectMatching(qualGroups, { ...fixed, [g]: s })) opts.push(s);
+    }
+    res[g] = opts.sort();
+  });
+  return res;
+}
+
 function renderBestThirds(standings) {
   const host = $("#thirds-card");
   if (!host) return;
@@ -302,15 +360,51 @@ function renderBestThirds(standings) {
   // Criterio FIFA para terceros: puntos, luego diferencia de goles, luego goles.
   thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
 
+  // Ganador actual de cada grupo (para mostrar al rival como equipo, no letra).
+  const winnerByGroup = {};
+  groups.forEach((g) => {
+    const letter = g.group.replace(/^GROUP_/, "").replace(/^Group\s*/i, "").trim();
+    const sorted = [...g.table].sort((a, b) => a.position - b.position);
+    if (sorted[0]) winnerByGroup[letter] = sorted[0].team;
+  });
+  const winnerGroupOf = (teamName) =>
+    Object.keys(winnerByGroup).find((k) => winnerByGroup[k] && winnerByGroup[k].name === teamName);
+
+  // Los 8 grupos cuyos terceros clasifican (provisional) y lo que la API ya fijó.
+  const top8Groups = thirds.slice(0, 8).map((t) => t.group);
+  const fixed = {};
+  thirds.slice(0, 8).forEach((t) => {
+    const opp = findR32Opponent(t.name);
+    const wg = opp && opp.name ? winnerGroupOf(opp.name) : null;
+    if (wg) fixed[t.group] = wg;
+  });
+  const projection = projectThirdOpponents(top8Groups, fixed);
+
+  const rivalCell = (t, i, q) => {
+    if (!q) return ""; // los que no clasifican no tienen rival
+    // 1) Si la API ya fijó el cruce, lo mostramos como confirmado.
+    const locked = findR32Opponent(t.name);
+    if (locked && locked.name) {
+      return `${teamBadgeImg(locked)}<span class="thirds-name">${esNameFor(locked.name)}</span>
+        <span class="rival-tag rival-ok" title="Confirmado por el cuadro oficial">✓</span>`;
+    }
+    // 2) Si no, mostramos los posibles rivales (ganadores) según la estructura.
+    const slots = projection[t.group] || [];
+    const teams = slots.map((s) => winnerByGroup[s]).filter(Boolean);
+    if (teams.length === 0) return `<span class="thirds-tbd">Por definir</span>`;
+    if (teams.length === 1) {
+      return `${teamBadgeImg(teams[0])}<span class="thirds-name">${esNameFor(teams[0].name)}</span>
+        <span class="rival-tag rival-proj" title="Único posible según la estructura">proyectado</span>`;
+    }
+    const flags = teams
+      .map((w) => `<span class="rival-opt" title="${esNameFor(w.name)}">${teamBadgeImg(w)}</span>`)
+      .join("");
+    return `<span class="rival-range">${flags}</span><span class="rival-count">${teams.length} posibles</span>`;
+  };
+
   const rows = thirds
     .map((t, i) => {
       const q = i < 8; // los 8 mejores clasifican
-      const owner = ownerFor(t.name);
-      const opp = findR32Opponent(t.name);
-      const oppHtml =
-        opp && opp.name
-          ? `${teamBadgeImg(opp)}<span>${esNameFor(opp.name)}</span>`
-          : `<span class="thirds-tbd">Por definir</span>`;
       return `<tr class="${q ? "thirds-in" : "thirds-out"}${i === 7 ? " thirds-cut" : ""}">
         <td>${i + 1}</td>
         <td class="thirds-team">
@@ -321,7 +415,7 @@ function renderBestThirds(standings) {
         </td>
         <td><strong>${t.pts}</strong></td>
         <td>${t.gd > 0 ? "+" + t.gd : t.gd}</td>
-        <td class="thirds-rival">${oppHtml}</td>
+        <td class="thirds-rival">${rivalCell(t, i, q)}</td>
       </tr>`;
     })
     .join("");
@@ -329,7 +423,7 @@ function renderBestThirds(standings) {
   host.innerHTML = `
     <div class="group-card thirds-wrap">
       <h3>Mejores terceros · clasifican 8</h3>
-      <p class="thirds-note">Orden: puntos → diferencia de goles → goles a favor. El rival de 16avos se confirma solo cuando la FIFA arma el cuadro al cerrar los grupos.</p>
+      <p class="thirds-note">Orden: puntos → dif. de goles → goles. <strong>Rival 16avos</strong>: ✓ = ya confirmado por el cuadro oficial; si no, son los <strong>posibles rivales</strong> según la estructura oficial (se van reduciendo en tiempo real conforme cierran los grupos). El cruce exacto lo fija la tabla privada de FIFA al terminar la fase de grupos.</p>
       <table class="group-table thirds-table">
         <thead>
           <tr><th>#</th><th style="text-align:left">Equipo</th><th>Pts</th><th>DG</th><th style="text-align:left">Rival 16avos</th></tr>
