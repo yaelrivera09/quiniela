@@ -899,32 +899,82 @@ function bracketWinnerSide(m) {
   return null;
 }
 
-function bracketTeamHtml(team, isWinner) {
+// Cruces de 16avos que NO involucran a un tercero: el rival queda totalmente
+// determinado por las posiciones de grupo (no necesitan la tabla de 495).
+const R32_OPP = {
+  "2A": "2B", "2B": "2A", "1F": "2C", "2C": "1F", "1C": "2F", "2F": "1C",
+  "2E": "2I", "2I": "2E", "2K": "2L", "2L": "2K", "1H": "2J", "2J": "1H",
+  "1J": "2H", "2H": "1J", "2D": "2G", "2G": "2D",
+};
+
+// Mapea equipos a su casilla (1X/2X) según la tabla actual, y marca grupos cerrados.
+function buildR32SlotMaps(standings, matches) {
+  const teamToSlot = {};
+  const slotToTeam = {};
+  const closed = {};
+  (standings || [])
+    .filter((s) => s.type === "TOTAL" && s.group)
+    .forEach((g) => {
+      const L = g.group.replace(/^GROUP_/, "").replace(/^Group\s*/i, "").trim();
+      const ms = matches.filter((m) => m.stage === "GROUP_STAGE" && m.group === "GROUP_" + L);
+      closed[L] = ms.length > 0 && ms.every((m) => m.status === "FINISHED");
+      const sorted = [...g.table].sort((a, b) => a.position - b.position);
+      if (sorted[0]) { teamToSlot[sorted[0].team.name] = "1" + L; slotToTeam["1" + L] = sorted[0].team; }
+      if (sorted[1]) { teamToSlot[sorted[1].team.name] = "2" + L; slotToTeam["2" + L] = sorted[1].team; }
+    });
+  return { teamToSlot, slotToTeam, closed };
+}
+
+// Dado un equipo ya colocado, devuelve su rival si es un cruce determinístico
+// (winner-vs-subcampeón) y el grupo del rival ya está cerrado.
+function r32ProjectedOpponent(knownName, maps) {
+  const slot = maps.teamToSlot[knownName];
+  if (!slot) return null;
+  const opp = R32_OPP[slot];
+  if (!opp) return null; // enfrenta a un tercero -> no determinístico aquí
+  if (!maps.closed[opp[1]]) return null; // grupo del rival aún abierto
+  return maps.slotToTeam[opp] || null;
+}
+
+function bracketTeamHtml(team, isWinner, projected) {
   if (!team || !team.name) {
     return `<div class="bk-team bk-tbd"><span>Por definir</span></div>`;
   }
-  return `<div class="bk-team ${isWinner ? "bk-win" : ""}">
+  return `<div class="bk-team ${isWinner ? "bk-win" : ""} ${projected ? "bk-proj" : ""}">
     ${team.crest ? `<img class="bk-crest" src="${team.crest}" alt="" loading="lazy" />` : ""}
     <span class="bk-name">${esNameFor(team.name)}</span>
-    ${ownerAvatarHtml(team.name)}
+    ${projected ? `<span class="bk-proj-tag" title="Proyectado por las posiciones de grupo">proy.</span>` : ownerAvatarHtml(team.name)}
   </div>`;
 }
 
-function bracketMatchHtml(m) {
+function bracketMatchHtml(m, maps) {
   const win = bracketWinnerSide(m);
   const h = m.score?.fullTime?.home;
   const a = m.score?.fullTime?.away;
   const hasScore = h != null && a != null;
   const isLive = m.status === "IN_PLAY" || m.status === "PAUSED";
   const dateLabel = m.utcDate ? `${formatDate(m.utcDate)} · ${formatTime(m.utcDate)}` : "";
+
+  // Proyectamos el lado faltante en cruces determinísticos.
+  let home = m.homeTeam, away = m.awayTeam, homeProj = false, awayProj = false;
+  if (maps && m.stage === "LAST_32") {
+    if ((!home || !home.name) && away && away.name) {
+      const p = r32ProjectedOpponent(away.name, maps);
+      if (p) { home = p; homeProj = true; }
+    } else if ((!away || !away.name) && home && home.name) {
+      const p = r32ProjectedOpponent(home.name, maps);
+      if (p) { away = p; awayProj = true; }
+    }
+  }
+
   return `<div class="bk-match ${isLive ? "bk-live" : ""}">
     ${dateLabel ? `<div class="bk-date">${dateLabel}</div>` : ""}
     <div class="bk-row">
-      ${bracketTeamHtml(m.homeTeam, win === "home")}
+      ${bracketTeamHtml(home, win === "home", homeProj)}
       <span class="bk-score">${hasScore ? h : ""}</span>
     </div>
     <div class="bk-row">
-      ${bracketTeamHtml(m.awayTeam, win === "away")}
+      ${bracketTeamHtml(away, win === "away", awayProj)}
       <span class="bk-score">${hasScore ? a : ""}</span>
     </div>
   </div>`;
@@ -935,6 +985,8 @@ function renderBracket(matches) {
   const info = $("#bracket-info");
   if (!wrap) return;
 
+  const maps = buildR32SlotMaps(lastStandings, matches);
+
   const cols = BRACKET_ROUNDS.map(([stage, label]) => {
     const ms = matches
       .filter((m) => m.stage === stage)
@@ -942,7 +994,7 @@ function renderBracket(matches) {
     if (ms.length === 0) return "";
     return `<div class="bk-col">
       <div class="bk-col-title">${label}</div>
-      ${ms.map(bracketMatchHtml).join("")}
+      ${ms.map((m) => bracketMatchHtml(m, maps)).join("")}
     </div>`;
   });
 
@@ -953,7 +1005,7 @@ function renderBracket(matches) {
   if (third.length) {
     cols.push(`<div class="bk-col">
       <div class="bk-col-title">Tercer lugar</div>
-      ${third.map(bracketMatchHtml).join("")}
+      ${third.map((m) => bracketMatchHtml(m, maps)).join("")}
     </div>`);
   }
 

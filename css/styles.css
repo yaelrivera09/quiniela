@@ -807,6 +807,19 @@ footer {
   font-style: italic;
 }
 
+.bk-proj .bk-name { font-style: italic; }
+.bk-proj-tag {
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  padding: 1px 5px;
+  margin-left: auto;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 .bk-win .bk-name { color: var(--green); font-weight: 800; }
 
 .bk-score {
