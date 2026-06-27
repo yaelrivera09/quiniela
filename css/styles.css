@@ -11,8 +11,29 @@
   --green: #1d7a4c;
   --green-soft: #e9f6ef;
   --gold: #b8860b;
+  --btn-bg: #16181d;
+  --btn-text: #ffffff;
   --radius: 14px;
 }
+
+html.dark {
+  --ink: #e7e9ee;
+  --muted: #9aa1ad;
+  --line: #2c2f37;
+  --bg: #121419;
+  --card: #1c1f26;
+  --accent: #e7e9ee;
+  --accent-soft: #262a33;
+  --red: #ff7a6e;
+  --red-soft: #3a2421;
+  --green: #4dd39a;
+  --green-soft: #183027;
+  --gold: #e0b44a;
+  --btn-bg: #e7e9ee;
+  --btn-text: #121419;
+}
+
+html.dark { color-scheme: dark; }
 
 * { box-sizing: border-box; }
 
@@ -98,7 +119,7 @@ html.standalone .tabs { padding-top: 16px; }
   cursor: pointer;
 }
 
-.refresh-btn:hover { background: #e3e6eb; }
+.refresh-btn:hover { background: var(--line); }
 .refresh-btn.spinning { opacity: 0.6; pointer-events: none; }
 
 .tabs {
@@ -129,9 +150,9 @@ html.standalone .tabs { padding-top: 16px; }
 .tab-btn:hover { border-color: var(--ink); color: var(--ink); }
 
 .tab-btn.active {
-  background: var(--ink);
-  color: #fff;
-  border-color: var(--ink);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-bg);
   box-shadow: 0 4px 12px rgba(16,18,29,.18);
 }
 
@@ -181,7 +202,7 @@ main {
   border-radius: 50%;
   object-fit: cover;
   background: var(--accent-soft);
-  box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--line);
+  box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--line);
 }
 
 .person-photo-fallback {
@@ -1049,8 +1070,8 @@ body.modal-open {
 .bet-status.rechazada { background: var(--red-soft); color: var(--red); }
 
 .bet-accept-btn {
-  background: var(--ink);
-  color: #fff;
+  background: var(--btn-bg);
+  color: var(--btn-text);
   border: none;
   padding: 7px 14px;
   border-radius: 8px;
@@ -1153,3 +1174,68 @@ body.modal-open {
   .bet-card { flex-direction: column; align-items: flex-start; }
   .bet-card-meta { width: 100%; justify-content: space-between; }
 }
+
+/* ---- Tabla de posiciones (porra) y Marcador de apuestas ---- */
+.lb-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.lb-title { margin: 0 0 4px; font-size: 1.05rem; font-weight: 700; }
+.lb-note { margin: 4px 0 12px; font-size: 0.7rem; color: var(--muted); line-height: 1.4; }
+
+.lb-list { display: flex; flex-direction: column; gap: 4px; }
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px;
+  border-radius: 10px;
+}
+.lb-row:nth-child(odd) { background: var(--bg); }
+.lb-row.lb-first { background: linear-gradient(90deg, #fff6db, transparent); }
+html.dark .lb-row.lb-first { background: linear-gradient(90deg, #3a330f, transparent); }
+
+.lb-pos { width: 26px; min-width: 26px; text-align: center; font-weight: 700; font-size: 0.95rem; }
+.lb-photo, .lb-photo-fallback {
+  width: 32px; height: 32px; min-width: 32px;
+  border-radius: 50%; object-fit: cover; background: var(--accent-soft);
+}
+.lb-photo-fallback { display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.72rem; }
+.lb-name { font-weight: 700; font-size: 0.92rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-alive { font-size: 0.68rem; color: var(--muted); white-space: nowrap; }
+.lb-score { font-weight: 800; font-size: 1.05rem; min-width: 44px; text-align: right; }
+.lb-score small { font-size: 0.6rem; font-weight: 600; color: var(--muted); margin-left: 2px; }
+
+/* Marcador de apuestas */
+.sb-list { display: flex; flex-direction: column; gap: 2px; }
+.sb-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; }
+.sb-row:nth-child(odd) { background: var(--bg); }
+.sb-name { font-weight: 700; font-size: 0.9rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-record { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+.sb-w { color: var(--green); font-weight: 700; }
+.sb-l { color: var(--red); font-weight: 700; }
+.sb-p { color: var(--muted); }
+.sb-net { font-weight: 800; font-size: 0.95rem; min-width: 56px; text-align: right; }
+.net-pos { color: var(--green); }
+.net-neg { color: var(--red); }
+
+/* ---- Novedades / feed ---- */
+.feed { display: flex; flex-direction: column; gap: 8px; }
+.feed-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 11px 14px;
+}
+.feed-icon { font-size: 1.3rem; min-width: 26px; text-align: center; }
+.feed-body { min-width: 0; flex: 1; }
+.feed-text { font-weight: 700; font-size: 0.9rem; }
+.feed-sub { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }

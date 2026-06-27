@@ -6,6 +6,7 @@ let allMatches = [];
 let lastBets = [];
 let lastStandings = null; // última tabla de grupos recibida, para re-pintarla
 let advancingTeams = new Set(); // equipos que ya están en el cuadro de eliminación
+let qualifyingThirds = new Set(); // terceros que HOY clasificarían (top-8 provisional)
 let currentBetTarget = null;
 let currentBetFrom = null;
 let currentBetContext = "";
@@ -122,6 +123,64 @@ function renderPeople() {
     `;
     grid.appendChild(card);
   });
+
+  renderLeaderboard();
+}
+
+/* ---------- Tabla de posiciones (porra) ---------- */
+const POINTS_BY_ROUND = { r32: 2, r16: 4, qf: 7, sf: 11, final: 16, champ: 25 };
+
+// Puntos por la ronda MÁS LEJANA que alcanzó un equipo.
+function teamRoundPoints(teamEn) {
+  const st = teamStatus[teamEn] || {};
+  if (st.winner) return POINTS_BY_ROUND.champ;
+  const inStage = (stage) =>
+    allMatches.some((m) => m.stage === stage && (m.homeTeam?.name === teamEn || m.awayTeam?.name === teamEn));
+  if (inStage("FINAL")) return POINTS_BY_ROUND.final;
+  if (inStage("SEMI_FINALS")) return POINTS_BY_ROUND.sf;
+  if (inStage("QUARTER_FINALS")) return POINTS_BY_ROUND.qf;
+  if (inStage("LAST_16")) return POINTS_BY_ROUND.r16;
+  if (inStage("LAST_32") || st.advancing || qualifyingThirds.has(teamEn)) return POINTS_BY_ROUND.r32;
+  return 0;
+}
+
+function renderLeaderboard() {
+  const host = $("#leaderboard");
+  if (!host) return;
+
+  const rows = PEOPLE.map((p) => {
+    let score = 0;
+    let alive = 0;
+    p.teams.forEach((t) => {
+      score += teamRoundPoints(t.en);
+      if (!(teamStatus[t.en] && teamStatus[t.en].eliminated)) alive++;
+    });
+    return { person: p, score, alive };
+  });
+  rows.sort((a, b) => b.score - a.score || b.alive - a.alive || a.person.name.localeCompare(b.person.name));
+
+  const medal = (i) => (i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1);
+
+  host.innerHTML = `
+    <div class="lb-card">
+      <h3 class="lb-title">🏆 Tabla de posiciones</h3>
+      <p class="lb-note">Cada equipo suma por su ronda más lejana: 16avos 2 · Octavos 4 · Cuartos 7 · Semis 11 · Final 16 · Campeón 25.</p>
+      <div class="lb-list">
+        ${rows
+          .map(
+            (r, i) => `
+          <div class="lb-row ${i === 0 && r.score > 0 ? "lb-first" : ""}">
+            <span class="lb-pos">${medal(i)}</span>
+            <img class="lb-photo" src="images/${r.person.photo}" alt=""
+                 onerror="this.outerHTML='<span class=\\'lb-photo-fallback\\'>${initials(r.person.name)}</span>'" />
+            <span class="lb-name">${r.person.name}</span>
+            <span class="lb-alive">${r.alive}/4 vivos</span>
+            <span class="lb-score">${r.score}<small>pts</small></span>
+          </div>`
+          )
+          .join("")}
+      </div>
+    </div>`;
 }
 
 /* ---------- Tabla de grupos ---------- */
@@ -426,6 +485,7 @@ function renderBestThirds(standings) {
 
   // Criterio FIFA para terceros: puntos, luego diferencia de goles, luego goles.
   thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+  qualifyingThirds = new Set(thirds.slice(0, 8).map((t) => t.name));
 
   // Ganador actual de cada grupo (para mostrar al rival como equipo, no letra).
   const winnerByGroup = {};
@@ -639,11 +699,12 @@ function renderMatches(matches) {
 
   if (todays.length === 0) {
     empty.classList.remove("hidden");
-    return;
+  } else {
+    empty.classList.add("hidden");
+    todays.forEach((m) => list.appendChild(buildMatchCard(m)));
   }
-  empty.classList.add("hidden");
 
-  todays.forEach((m) => list.appendChild(buildMatchCard(m)));
+  renderFeed();
 }
 
 function applyMatchResultsToTeamStatus(matches) {
@@ -1419,6 +1480,9 @@ function renderBets(bets) {
   const empty = $("#bets-empty");
   list.innerHTML = "";
 
+  renderBetsScoreboard(bets);
+  renderFeed();
+
   if (bets.length === 0) {
     empty.classList.remove("hidden");
     return;
@@ -1536,6 +1600,130 @@ function updateLiveBanner() {
   }
 }
 
+/* ---------- Marcador de apuestas ---------- */
+function renderBetsScoreboard(bets) {
+  const host = $("#bets-scoreboard");
+  if (!host) return;
+  bets = bets || lastBets || [];
+
+  const tally = {};
+  const get = (n) => (tally[n] = tally[n] || { won: 0, lost: 0, wonAmt: 0, lostAmt: 0, pending: 0 });
+
+  bets.forEach((b) => {
+    if (b.status === "rechazada") return;
+    const players = [b.fromName, b.targetName].filter(Boolean);
+    const match = findMatchByTeams(b.homeTeamEn, b.awayTeamEn);
+    const finished = match && match.status === "FINISHED";
+    const home = match?.score?.fullTime?.home;
+    const away = match?.score?.fullTime?.away;
+
+    if (b.status !== "aceptada" || !finished || home == null || away == null || home === away) {
+      players.forEach((n) => get(n).pending++);
+      return;
+    }
+    const winnerTeam = home > away ? b.homeTeamEn : b.awayTeamEn;
+    const owner = ownerFor(winnerTeam);
+    const wname = owner ? owner.name : null;
+    if (!wname || !players.includes(wname)) {
+      players.forEach((n) => get(n).pending++);
+      return;
+    }
+    const loser = players.find((n) => n !== wname);
+    get(wname).won++; get(wname).wonAmt += Number(b.amount) || 0;
+    if (loser) { get(loser).lost++; get(loser).lostAmt += Number(b.amount) || 0; }
+  });
+
+  const rows = Object.keys(tally).map((n) => ({ name: n, ...tally[n], net: tally[n].wonAmt - tally[n].lostAmt }));
+  if (rows.length === 0) { host.innerHTML = ""; return; }
+  rows.sort((a, b) => b.net - a.net || b.won - a.won);
+
+  host.innerHTML = `
+    <div class="lb-card sb-card">
+      <h3 class="lb-title">💸 Marcador de apuestas</h3>
+      <div class="sb-list">
+        ${rows
+          .map(
+            (r) => `
+          <div class="sb-row">
+            <span class="sb-name">${r.name}</span>
+            <span class="sb-record"><span class="sb-w">${r.won}G</span> · <span class="sb-l">${r.lost}P</span>${r.pending ? ` · <span class="sb-p">${r.pending} pend.</span>` : ""}</span>
+            <span class="sb-net ${r.net > 0 ? "net-pos" : r.net < 0 ? "net-neg" : ""}">${r.net > 0 ? "+" : ""}$${r.net}</span>
+          </div>`
+          )
+          .join("")}
+      </div>
+      <p class="lb-note">Saldo de apuestas aceptadas ya jugadas. G = ganadas, P = perdidas.</p>
+    </div>`;
+}
+
+/* ---------- Novedades / actividad ---------- */
+function timeAgo(date) {
+  const s = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (s < 60) return "hace un momento";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `hace ${h} h`;
+  return `hace ${Math.floor(h / 24)} d`;
+}
+
+function renderFeed() {
+  const host = $("#feed");
+  if (!host) return;
+  const items = [];
+
+  (allMatches || [])
+    .filter((m) => m.status === "FINISHED" && m.score?.fullTime?.home != null)
+    .sort((a, b) => new Date(b.lastUpdated || b.utcDate) - new Date(a.lastUpdated || a.utcDate))
+    .slice(0, 12)
+    .forEach((m) => {
+      items.push({
+        when: new Date(m.lastUpdated || m.utcDate),
+        icon: "⚽",
+        text: `${esNameFor(m.homeTeam.name)} ${m.score.fullTime.home}–${m.score.fullTime.away} ${esNameFor(m.awayTeam.name)}`,
+        sub: stageLabelFor(m.stage) || "Fase de grupos",
+      });
+    });
+
+  (lastBets || []).slice(0, 8).forEach((b) => {
+    items.push({
+      when: new Date(b.createdAt),
+      icon: "🎲",
+      text: `${b.fromName || "Alguien"} retó a ${b.targetName} · $${b.amount}`,
+      sub: b.context || "Apuesta",
+    });
+  });
+
+  items.sort((a, b) => b.when - a.when);
+  host.innerHTML =
+    items
+      .slice(0, 25)
+      .map(
+        (it) => `
+      <div class="feed-item">
+        <span class="feed-icon">${it.icon}</span>
+        <div class="feed-body">
+          <div class="feed-text">${it.text}</div>
+          <div class="feed-sub">${it.sub} · ${timeAgo(it.when)}</div>
+        </div>
+      </div>`
+      )
+      .join("") || `<div class="matches-empty">Sin novedades por ahora.</div>`;
+}
+
+/* ---------- Tema claro/oscuro ---------- */
+function initTheme() {
+  const btn = $("#theme-toggle");
+  if (!btn) return;
+  const sync = () => (btn.textContent = document.documentElement.classList.contains("dark") ? "☀️" : "🌙");
+  sync();
+  btn.addEventListener("click", () => {
+    const dark = document.documentElement.classList.toggle("dark");
+    try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
+    sync();
+  });
+}
+
 /* ---------- Motor de actualización ---------- */
 // En vez de timers fijos, ajustamos qué tan seguido se consulta según si hay
 // partidos en vivo ahora mismo: más agresivo cuando importa, más relajado
@@ -1639,6 +1827,7 @@ function detectStandalone() {
 function init() {
   checkForUpdate(); // si hay versión nueva, recarga sola a la última
   detectStandalone();
+  initTheme();
   initTabs();
   initModal();
   initBetModal();

@@ -11,7 +11,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Quiniela" />
 <title>Quiniela Familiar — Mundial 2026</title>
-<link rel="stylesheet" href="css/styles.css?v=20260618r" />
+<script>try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark');}catch(e){}</script>
+<link rel="stylesheet" href="css/styles.css?v=20260618s" />
 </head>
 <body>
   <header class="hero">
@@ -21,20 +22,27 @@
     <div class="sync-row">
       <span id="last-updated" class="last-updated"></span>
       <button id="refresh-now" class="refresh-btn" title="Actualizar ahora">🔄 Actualizar</button>
+      <button id="theme-toggle" class="refresh-btn" title="Cambiar tema" aria-label="Cambiar tema">🌙</button>
     </div>
   </header>
 
   <nav class="tabs">
     <button class="tab-btn active" data-tab="participantes">Participantes</button>
-    <button class="tab-btn" data-tab="grupos">Tabla de grupos</button>
+    <button class="tab-btn" data-tab="grupos">Grupos</button>
     <button class="tab-btn" data-tab="llaves">Llaves</button>
-    <button class="tab-btn" data-tab="partidos">Partidos de hoy</button>
+    <button class="tab-btn" data-tab="partidos">Hoy</button>
     <button class="tab-btn" data-tab="apuestas">Apuestas</button>
+    <button class="tab-btn" data-tab="novedades">Novedades</button>
   </nav>
 
   <main>
     <section id="participantes" class="tab-panel active">
+      <div id="leaderboard"></div>
       <div id="people-grid" class="people-grid"></div>
+    </section>
+
+    <section id="novedades" class="tab-panel">
+      <div id="feed" class="feed"></div>
     </section>
 
     <section id="grupos" class="tab-panel">
@@ -64,6 +72,7 @@
       <div id="bets-warning" class="api-warning hidden">
         No se pudo conectar con la base de datos de apuestas. Verifica que Upstash Redis esté conectado en Vercel.
       </div>
+      <div id="bets-scoreboard"></div>
       <div id="bets-empty" class="matches-empty hidden">Aún no hay apuestas. ¡Anímate a retar a alguien!</div>
       <div id="bets-list" class="bets-list"></div>
     </section>
@@ -95,7 +104,7 @@
     </div>
   </div>
 
-  <script src="data/people.js?v=20260618r"></script>
-  <script src="js/script.js?v=20260618r"></script>
+  <script src="data/people.js?v=20260618s"></script>
+  <script src="js/script.js?v=20260618s"></script>
 </body>
 </html>
