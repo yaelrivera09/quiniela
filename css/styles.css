@@ -367,12 +367,35 @@ main {
   padding: 14px;
 }
 
+.group-card-click {
+  cursor: pointer;
+  transition: border-color .18s, box-shadow .18s, transform .18s;
+}
+.group-card-click:hover {
+  border-color: #c9cdd4;
+  box-shadow: 0 8px 22px rgba(16,18,29,.08);
+  transform: translateY(-2px);
+}
+
 .group-card h3 {
   margin: 0 0 8px;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+
+.group-card-hint {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.group-card-click:hover .group-card-hint { color: var(--green); }
+
+.match-team.mt-win { color: var(--green); }
+.match-team.mt-win span { font-weight: 800; }
 
 .group-table {
   width: 100%;

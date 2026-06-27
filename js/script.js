@@ -309,10 +309,11 @@ function renderGroups(standings) {
   groupStandings.sort((a, b) => a.group.localeCompare(b.group));
 
   groupStandings.forEach((group) => {
-    const letter = group.group.replace(/^GROUP_/, "").replace(/^Group\s*/i, "");
+    const letter = group.group.replace(/^GROUP_/, "").replace(/^Group\s*/i, "").trim();
     const groupLetter = `Grupo ${letter}`;
     const card = document.createElement("div");
-    card.className = "group-card";
+    card.className = "group-card group-card-click";
+    card.addEventListener("click", () => openGroupModal(letter));
 
     const rows = group.table
       .map((row, idx) => {
@@ -347,7 +348,7 @@ function renderGroups(standings) {
       .join("");
 
     card.innerHTML = `
-      <h3>${groupLetter}</h3>
+      <h3>${groupLetter}<span class="group-card-hint">ver partidos ›</span></h3>
       <table class="group-table">
         <thead>
           <tr><th>#</th><th style="text-align:left">Equipo</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>DG</th><th>Pts</th></tr>
@@ -1297,13 +1298,80 @@ function initModal() {
     if (e.key === "Escape") {
       closePersonModal();
       closeBetModal();
+      closeGroupModal();
     }
+  });
+}
+
+/* ---------- Modal de grupo (partidos del grupo) ---------- */
+function groupMatchRowHtml(m) {
+  const homeFlag = flagFor(m.homeTeam.name);
+  const awayFlag = flagFor(m.awayTeam.name);
+  const home = m.score?.fullTime?.home ?? m.score?.halfTime?.home;
+  const away = m.score?.fullTime?.away ?? m.score?.halfTime?.away;
+  const hasScore = home != null && away != null;
+  const isLive = m.status === "IN_PLAY" || m.status === "PAUSED";
+  const win = bracketWinnerSide(m); // home | away | null (sólo finalizados)
+  return `<div class="modal-match">
+    <div class="modal-match-header">
+      <span>${formatDate(m.utcDate)} · ${formatTime(m.utcDate)}</span>
+      <span class="match-status ${statusClass(m.status)}">${isLive ? "EN VIVO" : STATUS_LABELS[m.status] || m.status}</span>
+    </div>
+    <div class="match-row">
+      <div class="match-team ${win === "home" ? "mt-win" : ""}">
+        ${homeFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${homeFlag}.png" alt="" />` : ""}
+        <span>${esNameFor(m.homeTeam.name)}</span>
+        ${ownerAvatarHtml(m.homeTeam.name)}
+      </div>
+      <span class="match-row-score">${hasScore ? home : "-"}</span>
+    </div>
+    <div class="match-row">
+      <div class="match-team ${win === "away" ? "mt-win" : ""}">
+        ${awayFlag ? `<img class="flag-mini" src="https://flagcdn.com/w40/${awayFlag}.png" alt="" />` : ""}
+        <span>${esNameFor(m.awayTeam.name)}</span>
+        ${ownerAvatarHtml(m.awayTeam.name)}
+      </div>
+      <span class="match-row-score">${hasScore ? away : "-"}</span>
+    </div>
+  </div>`;
+}
+
+function openGroupModal(letter) {
+  const ms = allMatches
+    .filter((m) => m.stage === "GROUP_STAGE" && m.group === "GROUP_" + letter)
+    .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+  const played = ms.filter((m) => m.status === "FINISHED");
+  const upcoming = ms.filter((m) => m.status !== "FINISHED");
+
+  $("#group-modal-content").innerHTML = `
+    <h2>Grupo ${letter}</h2>
+    <div class="modal-section-title">Jugados</div>
+    ${played.length ? played.map(groupMatchRowHtml).join("") : '<div class="modal-empty">Aún no hay partidos jugados.</div>'}
+    <div class="modal-section-title">Por jugar</div>
+    ${upcoming.length ? upcoming.map(groupMatchRowHtml).join("") : '<div class="modal-empty">No quedan partidos por jugar.</div>'}
+  `;
+  $("#group-modal").classList.remove("hidden");
+  syncBodyScrollLock();
+}
+
+function closeGroupModal() {
+  $("#group-modal").classList.add("hidden");
+  syncBodyScrollLock();
+}
+
+function initGroupModal() {
+  $("#group-modal-close").addEventListener("click", closeGroupModal);
+  $("#group-modal").addEventListener("click", (e) => {
+    if (e.target.id === "group-modal") closeGroupModal();
   });
 }
 
 /* ---------- Apuestas ---------- */
 function syncBodyScrollLock() {
-  const anyOpen = !$("#person-modal").classList.contains("hidden") || !$("#bet-modal").classList.contains("hidden");
+  const anyOpen =
+    !$("#person-modal").classList.contains("hidden") ||
+    !$("#bet-modal").classList.contains("hidden") ||
+    !$("#group-modal").classList.contains("hidden");
   document.body.classList.toggle("modal-open", anyOpen);
 }
 
@@ -1830,6 +1898,7 @@ function init() {
   initTheme();
   initTabs();
   initModal();
+  initGroupModal();
   initBetModal();
   renderPeople();
 
