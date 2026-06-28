@@ -748,6 +748,81 @@ footer {
   -webkit-overflow-scrolling: touch;
 }
 
+/* ---- Cuadro tipo árbol conectado ---- */
+.bk-tree {
+  display: flex;
+  align-items: stretch;
+  min-width: max-content;
+}
+
+.bk-round {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 184px;
+  width: 184px;
+}
+.bk-round:not(:last-child) { margin-right: 26px; }
+
+.bk-round-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  text-align: center;
+  min-height: 26px;
+  padding-bottom: 6px;
+}
+
+.bk-round-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.bk-cell {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-height: 76px;
+}
+.bk-cell .bk-match { width: 100%; position: relative; }
+
+/* Conectores: como cada columna tiene la misma altura y las celdas son
+   iguales, los centros se alinean. Dibujamos las "L" con pseudo-elementos. */
+.bk-round:not(:last-child) .bk-cell::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -13px;
+  width: 13px;
+  height: 2px;
+  background: var(--line);
+}
+.bk-round:not(:last-child) .bk-round-body .bk-cell:nth-child(odd)::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -13px;
+  width: 2px;
+  height: 100%;
+  background: var(--line);
+}
+.bk-round:not(:first-child) .bk-cell .bk-match::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -13px;
+  width: 13px;
+  height: 2px;
+  background: var(--line);
+}
+
+.bk-tree .bk-match { padding: 6px 8px; }
+.bk-tree .bk-date { font-size: 0.6rem; margin-bottom: 4px; padding-bottom: 3px; }
+.bk-tree .bk-match.bk-pending { background: var(--bg); }
+
 .bk-col {
   flex: 0 0 auto;
   width: 210px;

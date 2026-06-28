@@ -1122,10 +1122,6 @@ function buildProjectedR32(standings, matches) {
     }
     const apiMatch = (home.team && apiByTeam[home.team.name]) || (away.team && apiByTeam[away.team.name]) || null;
     return { home, away, apiMatch };
-  }).sort((a, b) => {
-    const da = a.apiMatch ? new Date(a.apiMatch.utcDate) : Infinity;
-    const db = b.apiMatch ? new Date(b.apiMatch.utcDate) : Infinity;
-    return da - db;
   });
 }
 
@@ -1159,46 +1155,55 @@ function projMatchHtml(d) {
   </div>`;
 }
 
+// Orden del cuadro (top→bottom): los 16avos en el orden del árbol oficial, para
+// que cada par consecutivo alimente un octavo. Índices sobre R32_STRUCT (M73=0…M88=15).
+const R32_BRACKET_ORDER = [1, 4, 0, 2, 10, 11, 8, 9, 3, 5, 6, 7, 13, 15, 12, 14];
+
+function treePlaceholderHtml() {
+  return `<div class="bk-match bk-pending">
+    <div class="bk-row"><div class="bk-team bk-tbd"><span>Por definir</span></div></div>
+    <div class="bk-row"><div class="bk-team bk-tbd"><span>Por definir</span></div></div>
+  </div>`;
+}
+
 function renderBracket(matches) {
   const wrap = $("#bracket");
   const info = $("#bracket-info");
   if (!wrap) return;
 
-  const maps = buildR32SlotMaps(lastStandings, matches);
   const proj = buildProjectedR32(lastStandings, matches);
+  const r32 = proj ? R32_BRACKET_ORDER.map((i) => projMatchHtml(proj[i])) : [];
 
-  const cols = BRACKET_ROUNDS.map(([stage, label]) => {
-    if (stage === "LAST_32" && proj) {
-      return `<div class="bk-col">
-        <div class="bk-col-title">${label}</div>
-        ${proj.map(projMatchHtml).join("")}
-      </div>`;
-    }
-    const ms = matches
-      .filter((m) => m.stage === stage)
-      .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
-    if (ms.length === 0) return "";
-    return `<div class="bk-col">
-      <div class="bk-col-title">${label}</div>
-      ${ms.map((m) => bracketMatchHtml(m, maps)).join("")}
-    </div>`;
-  });
+  const rounds = [
+    { title: "16avos de final", games: r32 },
+    { title: "Octavos de final", games: Array.from({ length: 8 }, treePlaceholderHtml) },
+    { title: "Cuartos de final", games: Array.from({ length: 4 }, treePlaceholderHtml) },
+    { title: "Semifinales", games: Array.from({ length: 2 }, treePlaceholderHtml) },
+    { title: "Final", games: [treePlaceholderHtml()] },
+  ];
 
-  // Partido por el tercer lugar, como columna extra al final.
-  const third = matches
-    .filter((m) => m.stage === "THIRD_PLACE")
-    .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
-  if (third.length) {
-    cols.push(`<div class="bk-col">
-      <div class="bk-col-title">Tercer lugar</div>
-      ${third.map((m) => bracketMatchHtml(m, maps)).join("")}
-    </div>`);
+  // Si todavía no hay proyección (sin standings), mostramos un aviso simple.
+  if (r32.length === 0) {
+    wrap.innerHTML = "";
+    info.classList.remove("hidden");
+    return;
   }
 
-  wrap.innerHTML = cols.join("");
+  wrap.innerHTML = `
+    <div class="bk-tree">
+      ${rounds
+        .map(
+          (r) => `
+        <div class="bk-round">
+          <div class="bk-round-title">${r.title}</div>
+          <div class="bk-round-body">
+            ${r.games.map((g) => `<div class="bk-cell">${g}</div>`).join("")}
+          </div>
+        </div>`
+        )
+        .join("")}
+    </div>`;
 
-  // El aviso ("los equipos se van asignando…") se mantiene mientras el cuadro
-  // siga incompleto, y desaparece solo cuando TODOS los cruces tengan equipos.
   const ko = matches.filter((m) => m.stage && m.stage !== "GROUP_STAGE");
   const allDefined = ko.length > 0 && ko.every((m) => m.homeTeam?.name && m.awayTeam?.name);
   info.classList.toggle("hidden", allDefined);
