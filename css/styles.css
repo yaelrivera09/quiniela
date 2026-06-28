@@ -748,6 +748,27 @@ footer {
   -webkit-overflow-scrolling: touch;
 }
 
+.bk-view-toggle {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.bk-view-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.bk-view-btn.active {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-color: var(--btn-bg);
+}
+
 /* ---- Cuadro tipo árbol conectado ---- */
 .bk-tree {
   display: flex;

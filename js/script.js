@@ -1166,14 +1166,42 @@ function treePlaceholderHtml() {
   </div>`;
 }
 
+let bracketView = (() => {
+  try { return localStorage.getItem("bracketView") || "tree"; } catch (e) { return "tree"; }
+})();
+
 function renderBracket(matches) {
   const wrap = $("#bracket");
   const info = $("#bracket-info");
   if (!wrap) return;
 
-  const proj = buildProjectedR32(lastStandings, matches);
-  const r32 = proj ? R32_BRACKET_ORDER.map((i) => projMatchHtml(proj[i])) : [];
+  // Estado del toggle de vista.
+  $$(".bk-view-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === bracketView));
+  wrap.classList.toggle("bracket-cards", bracketView === "cards");
 
+  const proj = buildProjectedR32(lastStandings, matches);
+
+  if (!proj) {
+    wrap.innerHTML = "";
+    info.classList.remove("hidden");
+    return;
+  }
+
+  if (bracketView === "cards") {
+    renderBracketCards(matches, proj);
+  } else {
+    renderBracketTree(matches, proj);
+  }
+
+  const ko = matches.filter((m) => m.stage && m.stage !== "GROUP_STAGE");
+  const allDefined = ko.length > 0 && ko.every((m) => m.homeTeam?.name && m.awayTeam?.name);
+  info.classList.toggle("hidden", allDefined);
+}
+
+// Vista árbol: columnas conectadas por líneas (bracket clásico).
+function renderBracketTree(matches, proj) {
+  const wrap = $("#bracket");
+  const r32 = R32_BRACKET_ORDER.map((i) => projMatchHtml(proj[i]));
   const rounds = [
     { title: "16avos de final", games: r32 },
     { title: "Octavos de final", games: Array.from({ length: 8 }, treePlaceholderHtml) },
@@ -1181,14 +1209,6 @@ function renderBracket(matches) {
     { title: "Semifinales", games: Array.from({ length: 2 }, treePlaceholderHtml) },
     { title: "Final", games: [treePlaceholderHtml()] },
   ];
-
-  // Si todavía no hay proyección (sin standings), mostramos un aviso simple.
-  if (r32.length === 0) {
-    wrap.innerHTML = "";
-    info.classList.remove("hidden");
-    return;
-  }
-
   wrap.innerHTML = `
     <div class="bk-tree">
       ${rounds
@@ -1203,10 +1223,42 @@ function renderBracket(matches) {
         )
         .join("")}
     </div>`;
+}
 
-  const ko = matches.filter((m) => m.stage && m.stage !== "GROUP_STAGE");
-  const allDefined = ko.length > 0 && ko.every((m) => m.homeTeam?.name && m.awayTeam?.name);
-  info.classList.toggle("hidden", allDefined);
+// Vista tarjetas: una columna por ronda con scroll (más cómoda en celular).
+function renderBracketCards(matches, proj) {
+  const wrap = $("#bracket");
+  const maps = buildR32SlotMaps(lastStandings, matches);
+  const r32sorted = [...proj].sort((a, b) => {
+    const da = a.apiMatch ? new Date(a.apiMatch.utcDate) : Infinity;
+    const db = b.apiMatch ? new Date(b.apiMatch.utcDate) : Infinity;
+    return da - db;
+  });
+
+  const cols = BRACKET_ROUNDS.map(([stage, label]) => {
+    if (stage === "LAST_32") {
+      return `<div class="bk-col"><div class="bk-col-title">${label}</div>${r32sorted.map(projMatchHtml).join("")}</div>`;
+    }
+    const ms = matches.filter((m) => m.stage === stage).sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+    if (ms.length === 0) return "";
+    return `<div class="bk-col"><div class="bk-col-title">${label}</div>${ms.map((m) => bracketMatchHtml(m, maps)).join("")}</div>`;
+  });
+
+  const third = matches.filter((m) => m.stage === "THIRD_PLACE");
+  if (third.length) {
+    cols.push(`<div class="bk-col"><div class="bk-col-title">Tercer lugar</div>${third.map((m) => bracketMatchHtml(m, maps)).join("")}</div>`);
+  }
+  wrap.innerHTML = cols.join("");
+}
+
+function initBracketToggle() {
+  $$(".bk-view-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      bracketView = btn.dataset.view;
+      try { localStorage.setItem("bracketView", bracketView); } catch (e) {}
+      if (allMatches.length) renderBracket(allMatches);
+    });
+  });
 }
 
 /* ---------- Modal de participante ---------- */
@@ -1976,6 +2028,7 @@ function init() {
   initModal();
   initGroupModal();
   initBetModal();
+  initBracketToggle();
   renderPeople();
 
   const lu = $("#last-updated");
