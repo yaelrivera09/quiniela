@@ -806,7 +806,7 @@ footer {
   display: flex;
   align-items: center;
   position: relative;
-  min-height: 76px;
+  min-height: 104px;
 }
 .bk-cell .bk-match { width: 100%; position: relative; }
 
@@ -1463,8 +1463,7 @@ html.dark .scorer-row.scorer-first { background: linear-gradient(90deg, #3a330f,
 .radial-badge.rad-won .rad-flag { border-color: var(--green); box-shadow: 0 0 0 1.5px var(--green); }
 
 /* Ganadores que avanzaron (nodos internos) y campeón */
-.rad-node-badge { width: 6.2%; }
-.rad-node-badge .rad-owner { display: none; }
+.rad-node-badge { width: 7.4%; }
 .rad-champ { width: 14%; z-index: 3; }
 .rad-champ .rad-flag { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 16px rgba(240,178,50,.6); }
 

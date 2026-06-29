@@ -130,18 +130,40 @@ function renderPeople() {
 /* ---------- Tabla de posiciones (porra) ---------- */
 const POINTS_BY_ROUND = { r32: 2, r16: 4, qf: 7, sf: 11, final: 16, champ: 25 };
 
-// Puntos por la ronda MÁS LEJANA que alcanzó un equipo.
+// Puntos por la ronda MÁS LEJANA que alcanzó un equipo. Cuenta tanto aparecer
+// en una ronda como GANAR un partido de eliminación (avanza a la siguiente),
+// porque la API a veces tarda en colocar al equipo en la siguiente ronda.
+const STAGE_PTS = {
+  LAST_32: POINTS_BY_ROUND.r32,
+  LAST_16: POINTS_BY_ROUND.r16,
+  QUARTER_FINALS: POINTS_BY_ROUND.qf,
+  SEMI_FINALS: POINTS_BY_ROUND.sf,
+  FINAL: POINTS_BY_ROUND.final,
+};
+const NEXT_PTS = {
+  LAST_32: POINTS_BY_ROUND.r16,
+  LAST_16: POINTS_BY_ROUND.qf,
+  QUARTER_FINALS: POINTS_BY_ROUND.sf,
+  SEMI_FINALS: POINTS_BY_ROUND.final,
+  FINAL: POINTS_BY_ROUND.champ,
+};
+
 function teamRoundPoints(teamEn) {
   const st = teamStatus[teamEn] || {};
   if (st.winner) return POINTS_BY_ROUND.champ;
-  const inStage = (stage) =>
-    allMatches.some((m) => m.stage === stage && (m.homeTeam?.name === teamEn || m.awayTeam?.name === teamEn));
-  if (inStage("FINAL")) return POINTS_BY_ROUND.final;
-  if (inStage("SEMI_FINALS")) return POINTS_BY_ROUND.sf;
-  if (inStage("QUARTER_FINALS")) return POINTS_BY_ROUND.qf;
-  if (inStage("LAST_16")) return POINTS_BY_ROUND.r16;
-  if (inStage("LAST_32") || st.advancing || qualifyingThirds.has(teamEn)) return POINTS_BY_ROUND.r32;
-  return 0;
+
+  let best = st.advancing || qualifyingThirds.has(teamEn) ? POINTS_BY_ROUND.r32 : 0;
+
+  allMatches.forEach((m) => {
+    if (!m.stage || m.stage === "GROUP_STAGE") return;
+    const inMatch = m.homeTeam?.name === teamEn || m.awayTeam?.name === teamEn;
+    if (inMatch) best = Math.max(best, STAGE_PTS[m.stage] || 0);
+    if (m.status === "FINISHED") {
+      const w = knockoutWinnerTeam(m);
+      if (w && w.name === teamEn) best = Math.max(best, NEXT_PTS[m.stage] || 0);
+    }
+  });
+  return best;
 }
 
 function renderLeaderboard() {
