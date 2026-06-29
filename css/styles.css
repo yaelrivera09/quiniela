@@ -1381,3 +1381,72 @@ html.dark .scorer-row.scorer-first { background: linear-gradient(90deg, #3a330f,
 .scorer-team strong { color: var(--ink); }
 .scorer-goals { font-weight: 800; font-size: 1.1rem; min-width: 40px; text-align: right; }
 .scorer-goals small { font-size: 0.7rem; margin-left: 2px; }
+
+/* ---- Cuadro radial (circular) ---- */
+.bracket.bracket-radial {
+  display: block;
+  overflow: visible;
+}
+.radial-wrap { width: 100%; overflow: hidden; }
+.radial {
+  position: relative;
+  width: min(100%, 560px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  cursor: zoom-in;
+  transition: transform .25s ease;
+}
+.radial.zoomed { transform: scale(2.1); cursor: zoom-out; }
+
+.radial-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.radial-svg .rad-lines line { stroke: var(--line); stroke-width: 0.35; }
+.radial-svg .rad-nodes circle { fill: var(--card); stroke: var(--line); stroke-width: 0.35; }
+
+.radial-glow {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 42%; height: 42%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,178,50,.45), rgba(240,178,50,0) 65%);
+  pointer-events: none;
+}
+.radial-center {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(1.5rem, 8%, 2.4rem);
+  line-height: 1;
+  z-index: 2;
+}
+
+.radial-badge {
+  position: absolute;
+  width: 8.6%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--card);
+  border: 1.5px solid var(--card);
+  box-shadow: 0 0 0 1px var(--line), 0 1px 3px rgba(0,0,0,.25);
+}
+.radial-badge img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.radial-badge.rad-tbd {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-soft);
+}
+.rad-q { color: var(--muted); font-weight: 700; font-size: 0.7rem; }
+
+.radial-hint {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin: 10px 0 0;
+}

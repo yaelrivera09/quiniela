@@ -1177,7 +1177,7 @@ function renderBracket(matches) {
 
   // Estado del toggle de vista.
   $$(".bk-view-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === bracketView));
-  wrap.classList.toggle("bracket-cards", bracketView === "cards");
+  wrap.classList.toggle("bracket-radial", bracketView === "radial");
 
   const proj = buildProjectedR32(lastStandings, matches);
 
@@ -1189,6 +1189,8 @@ function renderBracket(matches) {
 
   if (bracketView === "cards") {
     renderBracketCards(matches, proj);
+  } else if (bracketView === "radial") {
+    renderBracketRadial(matches, proj);
   } else {
     renderBracketTree(matches, proj);
   }
@@ -1251,6 +1253,73 @@ function renderBracketCards(matches, proj) {
   wrap.innerHTML = cols.join("");
 }
 
+// Vista radial: bracket circular con las banderas alrededor y el trofeo al centro.
+function radialPolar(r, deg) {
+  const rad = (deg * Math.PI) / 180;
+  return { x: 50 + r * Math.cos(rad), y: 50 + r * Math.sin(rad) };
+}
+
+function renderBracketRadial(matches, proj) {
+  const wrap = $("#bracket");
+
+  // 32 "lados" (cada partido aporta 2) en orden del cuadro.
+  const leaves = [];
+  R32_BRACKET_ORDER.forEach((i) => { leaves.push(proj[i].home); leaves.push(proj[i].away); });
+
+  const N = leaves.length; // 32
+  const radii = [45, 37, 28.5, 20, 11.5, 0]; // leaf, r32, r16, qf, sf, final
+
+  // Ángulos por nivel (promediando pares hacia el centro).
+  const levels = [Array.from({ length: N }, (_, i) => -90 + i * (360 / N))];
+  while (levels[levels.length - 1].length > 1) {
+    const cur = levels[levels.length - 1];
+    const next = [];
+    for (let k = 0; k < cur.length; k += 2) next.push((cur[k] + cur[k + 1]) / 2);
+    levels.push(next);
+  }
+  const pos = levels.map((angs, lvl) => angs.map((a) => radialPolar(radii[lvl], a)));
+  pos[pos.length - 1] = [{ x: 50, y: 50 }]; // final = centro
+
+  let lines = "";
+  for (let lvl = 0; lvl < pos.length - 1; lvl++) {
+    pos[lvl].forEach((p, idx) => {
+      const parent = pos[lvl + 1][Math.floor(idx / 2)];
+      lines += `<line x1="${p.x.toFixed(2)}" y1="${p.y.toFixed(2)}" x2="${parent.x.toFixed(2)}" y2="${parent.y.toFixed(2)}" />`;
+    });
+  }
+  let nodes = "";
+  for (let lvl = 1; lvl < pos.length - 1; lvl++) {
+    pos[lvl].forEach((p) => { nodes += `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="1.1" />`; });
+  }
+
+  const badges = leaves
+    .map((side, i) => {
+      const p = pos[0][i];
+      const team = side && side.team;
+      const flag = team ? flagFor(team.name) : null;
+      const title = team ? esNameFor(team.name) : "Por definir";
+      const inner = flag
+        ? `<img src="https://flagcdn.com/w80/${flag}.png" alt="" />`
+        : `<span class="rad-q">?</span>`;
+      return `<div class="radial-badge ${team ? "" : "rad-tbd"}" style="left:${p.x.toFixed(2)}%;top:${p.y.toFixed(2)}%" title="${title}">${inner}</div>`;
+    })
+    .join("");
+
+  wrap.innerHTML = `
+    <div class="radial-wrap">
+      <div class="radial">
+        <svg class="radial-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+          <g class="rad-lines">${lines}</g>
+          <g class="rad-nodes">${nodes}</g>
+        </svg>
+        <div class="radial-glow"></div>
+        <div class="radial-center">🏆</div>
+        ${badges}
+      </div>
+      <p class="radial-hint">Toca el cuadro para acercar / alejar</p>
+    </div>`;
+}
+
 function initBracketToggle() {
   $$(".bk-view-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1258,6 +1327,22 @@ function initBracketToggle() {
       try { localStorage.setItem("bracketView", bracketView); } catch (e) {}
       if (allMatches.length) renderBracket(allMatches);
     });
+  });
+
+  // Zoom al tocar el cuadro radial (acercándose al punto tocado).
+  $("#bracket").addEventListener("click", (e) => {
+    const radial = e.target.closest(".radial");
+    if (!radial) return;
+    if (radial.classList.contains("zoomed")) {
+      radial.classList.remove("zoomed");
+      radial.style.transformOrigin = "";
+    } else {
+      const rect = radial.getBoundingClientRect();
+      const ox = ((e.clientX - rect.left) / rect.width) * 100;
+      const oy = ((e.clientY - rect.top) / rect.height) * 100;
+      radial.style.transformOrigin = `${ox}% ${oy}%`;
+      radial.classList.add("zoomed");
+    }
   });
 }
 
