@@ -1170,29 +1170,122 @@ let bracketView = (() => {
   try { return localStorage.getItem("bracketView") || "tree"; } catch (e) { return "tree"; }
 })();
 
+// Ganador de un partido de eliminación directa (considera penales).
+function knockoutWinnerTeam(m) {
+  if (!m || m.status !== "FINISHED") return null;
+  const w = m.score?.winner;
+  if (w === "HOME_TEAM") return m.homeTeam;
+  if (w === "AWAY_TEAM") return m.awayTeam;
+  const h = m.score?.fullTime?.home, a = m.score?.fullTime?.away;
+  if (h != null && a != null && h !== a) return h > a ? m.homeTeam : m.awayTeam;
+  return null;
+}
+
+function findKnockoutMatchByTeams(aName, bName) {
+  if (!aName || !bName) return null;
+  return (
+    allMatches.find(
+      (m) =>
+        m.stage && m.stage !== "GROUP_STAGE" &&
+        ((m.homeTeam?.name === aName && m.awayTeam?.name === bName) ||
+          (m.homeTeam?.name === bName && m.awayTeam?.name === aName))
+    ) || null
+  );
+}
+
+// Arma TODAS las rondas con propagación de ganadores: cada ronda toma a los
+// ganadores de la anterior. Devuelve [R32(16), Octavos(8), Cuartos(4), Semis(2), Final(1)].
+function buildFullBracket(proj) {
+  const r32 = R32_BRACKET_ORDER.map((i) => {
+    const d = proj[i];
+    return {
+      a: d.home.team || null,
+      b: d.away.team || null,
+      projA: !!d.home.projected,
+      projB: !!d.away.projected,
+      ambigA: d.home.ambiguous || 0,
+      ambigB: d.away.ambiguous || 0,
+      apiMatch: d.apiMatch,
+      winner: knockoutWinnerTeam(d.apiMatch),
+    };
+  });
+  const rounds = [r32];
+  let prev = r32;
+  while (prev.length > 1) {
+    const next = [];
+    for (let k = 0; k < prev.length; k += 2) {
+      const a = prev[k].winner || null;
+      const b = prev[k + 1].winner || null;
+      const apiMatch = a && b ? findKnockoutMatchByTeams(a.name, b.name) : null;
+      next.push({ a, b, apiMatch, winner: knockoutWinnerTeam(apiMatch) });
+    }
+    rounds.push(next);
+    prev = next;
+  }
+  return rounds;
+}
+
+function bracketSideHtml(team, isWinner, projected, ambiguous, isLoser) {
+  if (team && team.name) {
+    return `<div class="bk-team ${isWinner ? "bk-win" : ""} ${projected ? "bk-proj" : ""} ${isLoser ? "bk-loser" : ""}">
+      ${teamBadgeImg(team)}
+      <span class="bk-name">${esNameFor(team.name)}</span>
+      ${projected ? `<span class="bk-proj-tag">proy.</span>` : ownerAvatarHtml(team.name)}
+    </div>`;
+  }
+  if (ambiguous) return `<div class="bk-team bk-tbd"><span>${ambiguous} posibles 3º</span></div>`;
+  return `<div class="bk-team bk-tbd"><span>Por definir</span></div>`;
+}
+
+function bracketBoxHtml(match) {
+  const m = match.apiMatch;
+  const isLive = m && (m.status === "IN_PLAY" || m.status === "PAUSED");
+  const dateLabel = m && m.utcDate ? `${formatDate(m.utcDate)} · ${formatTime(m.utcDate)}` : "";
+  const h = m?.score?.fullTime?.home, a = m?.score?.fullTime?.away;
+  const hasScore = h != null && a != null;
+  let aScore = "", bScore = "";
+  if (hasScore && m) {
+    const aIsHome = match.a && m.homeTeam?.name === match.a.name;
+    aScore = aIsHome ? h : a;
+    bScore = aIsHome ? a : h;
+  }
+  const winName = match.winner && match.winner.name;
+  const aWin = !!(winName && match.a && match.a.name === winName);
+  const bWin = !!(winName && match.b && match.b.name === winName);
+  const aLose = !!(winName && match.a && match.a.name !== winName);
+  const bLose = !!(winName && match.b && match.b.name !== winName);
+  return `<div class="bk-match ${isLive ? "bk-live" : ""} ${match.a || match.b ? "" : "bk-pending"}">
+    ${dateLabel ? `<div class="bk-date">${dateLabel}</div>` : ""}
+    <div class="bk-row">${bracketSideHtml(match.a, aWin, match.projA, match.ambigA, aLose)}<span class="bk-score">${hasScore ? aScore : ""}</span></div>
+    <div class="bk-row">${bracketSideHtml(match.b, bWin, match.projB, match.ambigB, bLose)}<span class="bk-score">${hasScore ? bScore : ""}</span></div>
+  </div>`;
+}
+
+const BRACKET_TITLES = ["16avos de final", "Octavos de final", "Cuartos de final", "Semifinales", "Final"];
+
 function renderBracket(matches) {
   const wrap = $("#bracket");
   const info = $("#bracket-info");
   if (!wrap) return;
 
-  // Estado del toggle de vista.
   $$(".bk-view-btn").forEach((b) => b.classList.toggle("active", b.dataset.view === bracketView));
   wrap.classList.toggle("bracket-radial", bracketView === "radial");
 
   const proj = buildProjectedR32(lastStandings, matches);
-
   if (!proj) {
     wrap.innerHTML = "";
     info.classList.remove("hidden");
     return;
   }
 
+  const rounds = buildFullBracket(proj);
+
   if (bracketView === "cards") {
-    renderBracketCards(matches, proj);
+    renderBracketCards(rounds);
   } else if (bracketView === "radial") {
-    renderBracketRadial(matches, proj);
+    renderBracketRadial(rounds);
   } else {
-    renderBracketTree(matches, proj);
+    renderBracketTree(rounds);
   }
 
   const ko = matches.filter((m) => m.stage && m.stage !== "GROUP_STAGE");
@@ -1201,25 +1294,17 @@ function renderBracket(matches) {
 }
 
 // Vista árbol: columnas conectadas por líneas (bracket clásico).
-function renderBracketTree(matches, proj) {
+function renderBracketTree(rounds) {
   const wrap = $("#bracket");
-  const r32 = R32_BRACKET_ORDER.map((i) => projMatchHtml(proj[i]));
-  const rounds = [
-    { title: "16avos de final", games: r32 },
-    { title: "Octavos de final", games: Array.from({ length: 8 }, treePlaceholderHtml) },
-    { title: "Cuartos de final", games: Array.from({ length: 4 }, treePlaceholderHtml) },
-    { title: "Semifinales", games: Array.from({ length: 2 }, treePlaceholderHtml) },
-    { title: "Final", games: [treePlaceholderHtml()] },
-  ];
   wrap.innerHTML = `
     <div class="bk-tree">
       ${rounds
         .map(
-          (r) => `
+          (round, idx) => `
         <div class="bk-round">
-          <div class="bk-round-title">${r.title}</div>
+          <div class="bk-round-title">${BRACKET_TITLES[idx]}</div>
           <div class="bk-round-body">
-            ${r.games.map((g) => `<div class="bk-cell">${g}</div>`).join("")}
+            ${round.map((m) => `<div class="bk-cell">${bracketBoxHtml(m)}</div>`).join("")}
           </div>
         </div>`
         )
@@ -1228,28 +1313,19 @@ function renderBracketTree(matches, proj) {
 }
 
 // Vista tarjetas: una columna por ronda con scroll (más cómoda en celular).
-function renderBracketCards(matches, proj) {
+function renderBracketCards(rounds) {
   const wrap = $("#bracket");
-  const maps = buildR32SlotMaps(lastStandings, matches);
-  const r32sorted = [...proj].sort((a, b) => {
-    const da = a.apiMatch ? new Date(a.apiMatch.utcDate) : Infinity;
-    const db = b.apiMatch ? new Date(b.apiMatch.utcDate) : Infinity;
-    return da - db;
-  });
-
-  const cols = BRACKET_ROUNDS.map(([stage, label]) => {
-    if (stage === "LAST_32") {
-      return `<div class="bk-col"><div class="bk-col-title">${label}</div>${r32sorted.map(projMatchHtml).join("")}</div>`;
+  const cols = rounds.map((round, idx) => {
+    let ms = round;
+    if (idx === 0) {
+      ms = [...round].sort((a, b) => {
+        const da = a.apiMatch ? new Date(a.apiMatch.utcDate) : Infinity;
+        const db = b.apiMatch ? new Date(b.apiMatch.utcDate) : Infinity;
+        return da - db;
+      });
     }
-    const ms = matches.filter((m) => m.stage === stage).sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
-    if (ms.length === 0) return "";
-    return `<div class="bk-col"><div class="bk-col-title">${label}</div>${ms.map((m) => bracketMatchHtml(m, maps)).join("")}</div>`;
+    return `<div class="bk-col"><div class="bk-col-title">${BRACKET_TITLES[idx]}</div>${ms.map(bracketBoxHtml).join("")}</div>`;
   });
-
-  const third = matches.filter((m) => m.stage === "THIRD_PLACE");
-  if (third.length) {
-    cols.push(`<div class="bk-col"><div class="bk-col-title">Tercer lugar</div>${third.map((m) => bracketMatchHtml(m, maps)).join("")}</div>`);
-  }
   wrap.innerHTML = cols.join("");
 }
 
@@ -1259,17 +1335,29 @@ function radialPolar(r, deg) {
   return { x: 50 + r * Math.cos(rad), y: 50 + r * Math.sin(rad) };
 }
 
-function renderBracketRadial(matches, proj) {
+function radialBadgeHtml(team, p, cls) {
+  if (!team || !team.name) {
+    return `<div class="radial-badge rad-tbd ${cls}" style="left:${p.x.toFixed(2)}%;top:${p.y.toFixed(2)}%"><span class="rad-q">?</span></div>`;
+  }
+  const flag = flagFor(team.name);
+  const owner = ownerFor(team.name);
+  const inner = flag ? `<img class="rad-flag" src="https://flagcdn.com/w80/${flag}.png" alt="" />` : `<span class="rad-q">?</span>`;
+  const ownerImg = owner
+    ? `<img class="rad-owner" src="images/${owner.photo}" alt="" onerror="this.style.display='none'" />`
+    : "";
+  return `<div class="radial-badge ${cls}" style="left:${p.x.toFixed(2)}%;top:${p.y.toFixed(2)}%" title="${esNameFor(team.name)}${owner ? " · " + owner.name : ""}">${inner}${ownerImg}</div>`;
+}
+
+function renderBracketRadial(rounds) {
   const wrap = $("#bracket");
 
-  // 32 "lados" (cada partido aporta 2) en orden del cuadro.
+  // 32 "lados" (cada partido aporta 2 equipos) en orden del cuadro.
   const leaves = [];
-  R32_BRACKET_ORDER.forEach((i) => { leaves.push(proj[i].home); leaves.push(proj[i].away); });
+  rounds[0].forEach((m) => { leaves.push({ team: m.a, winner: m.winner }); leaves.push({ team: m.b, winner: m.winner }); });
 
   const N = leaves.length; // 32
-  const radii = [45, 37, 28.5, 20, 11.5, 0]; // leaf, r32, r16, qf, sf, final
+  const radii = [45, 37, 28.5, 20, 11.5, 0]; // hojas, R32, R16, cuartos, semis, final
 
-  // Ángulos por nivel (promediando pares hacia el centro).
   const levels = [Array.from({ length: N }, (_, i) => -90 + i * (360 / N))];
   while (levels[levels.length - 1].length > 1) {
     const cur = levels[levels.length - 1];
@@ -1278,7 +1366,7 @@ function renderBracketRadial(matches, proj) {
     levels.push(next);
   }
   const pos = levels.map((angs, lvl) => angs.map((a) => radialPolar(radii[lvl], a)));
-  pos[pos.length - 1] = [{ x: 50, y: 50 }]; // final = centro
+  pos[pos.length - 1] = [{ x: 50, y: 50 }];
 
   let lines = "";
   for (let lvl = 0; lvl < pos.length - 1; lvl++) {
@@ -1287,36 +1375,47 @@ function renderBracketRadial(matches, proj) {
       lines += `<line x1="${p.x.toFixed(2)}" y1="${p.y.toFixed(2)}" x2="${parent.x.toFixed(2)}" y2="${parent.y.toFixed(2)}" />`;
     });
   }
-  let nodes = "";
-  for (let lvl = 1; lvl < pos.length - 1; lvl++) {
-    pos[lvl].forEach((p) => { nodes += `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="1.1" />`; });
-  }
 
-  const badges = leaves
-    .map((side, i) => {
-      const p = pos[0][i];
-      const team = side && side.team;
-      const flag = team ? flagFor(team.name) : null;
-      const title = team ? esNameFor(team.name) : "Por definir";
-      const inner = flag
-        ? `<img src="https://flagcdn.com/w80/${flag}.png" alt="" />`
-        : `<span class="rad-q">?</span>`;
-      return `<div class="radial-badge ${team ? "" : "rad-tbd"}" style="left:${p.x.toFixed(2)}%;top:${p.y.toFixed(2)}%" title="${title}">${inner}</div>`;
+  // Banderas de las hojas (32). El equipo que perdió su partido se atenúa.
+  const leafBadges = leaves
+    .map((leaf, i) => {
+      const isLoser = leaf.winner && leaf.team && leaf.winner.name !== leaf.team.name;
+      const isWinner = leaf.winner && leaf.team && leaf.winner.name === leaf.team.name;
+      return radialBadgeHtml(leaf.team, pos[0][i], `rad-leaf ${isLoser ? "rad-lost" : ""} ${isWinner ? "rad-won" : ""}`);
     })
     .join("");
+
+  // Nodos internos: si el partido de esa posición ya tiene ganador, mostramos su
+  // bandera (el equipo avanzó hacia el centro); si no, un círculo vacío.
+  let nodeBadges = "";
+  let emptyNodes = "";
+  for (let lvl = 1; lvl < pos.length - 1; lvl++) {
+    const roundMatches = rounds[lvl - 1]; // rounds[0]=R32 -> nivel 1, etc.
+    pos[lvl].forEach((p, k) => {
+      const w = roundMatches[k] && roundMatches[k].winner;
+      if (w) nodeBadges += radialBadgeHtml(w, p, "rad-node-badge");
+      else emptyNodes += `<circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="1.1" />`;
+    });
+  }
+
+  // Centro: campeón si la final ya tiene ganador, si no el trofeo.
+  const champ = rounds[rounds.length - 1][0] && rounds[rounds.length - 1][0].winner;
+  const centerHtml = champ
+    ? radialBadgeHtml(champ, { x: 50, y: 50 }, "rad-champ")
+    : `<div class="radial-center">🏆</div>`;
 
   wrap.innerHTML = `
     <div class="radial-wrap">
       <div class="radial">
         <svg class="radial-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
           <g class="rad-lines">${lines}</g>
-          <g class="rad-nodes">${nodes}</g>
+          <g class="rad-nodes">${emptyNodes}</g>
         </svg>
         <div class="radial-glow"></div>
-        <div class="radial-center">🏆</div>
-        ${badges}
+        ${centerHtml}
+        ${nodeBadges}
+        ${leafBadges}
       </div>
-      <p class="radial-hint">Toca el cuadro para acercar / alejar</p>
     </div>`;
 }
 
@@ -1327,22 +1426,6 @@ function initBracketToggle() {
       try { localStorage.setItem("bracketView", bracketView); } catch (e) {}
       if (allMatches.length) renderBracket(allMatches);
     });
-  });
-
-  // Zoom al tocar el cuadro radial (acercándose al punto tocado).
-  $("#bracket").addEventListener("click", (e) => {
-    const radial = e.target.closest(".radial");
-    if (!radial) return;
-    if (radial.classList.contains("zoomed")) {
-      radial.classList.remove("zoomed");
-      radial.style.transformOrigin = "";
-    } else {
-      const rect = radial.getBoundingClientRect();
-      const ox = ((e.clientX - rect.left) / rect.width) * 100;
-      const oy = ((e.clientY - rect.top) / rect.height) * 100;
-      radial.style.transformOrigin = `${ox}% ${oy}%`;
-      radial.classList.add("zoomed");
-    }
   });
 }
 

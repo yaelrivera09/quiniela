@@ -1393,10 +1393,7 @@ html.dark .scorer-row.scorer-first { background: linear-gradient(90deg, #3a330f,
   width: min(100%, 560px);
   aspect-ratio: 1 / 1;
   margin: 0 auto;
-  cursor: zoom-in;
-  transition: transform .25s ease;
 }
-.radial.zoomed { transform: scale(2.1); cursor: zoom-out; }
 
 .radial-svg {
   position: absolute;
@@ -1432,21 +1429,45 @@ html.dark .scorer-row.scorer-first { background: linear-gradient(90deg, #3a330f,
   aspect-ratio: 1 / 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  overflow: hidden;
-  background: var(--card);
+}
+.radial-badge .rad-flag {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
   border: 1.5px solid var(--card);
   box-shadow: 0 0 0 1px var(--line), 0 1px 3px rgba(0,0,0,.25);
 }
-.radial-badge img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .radial-badge.rad-tbd {
-  display: flex; align-items: center; justify-content: center;
   background: var(--accent-soft);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 1px var(--line);
 }
 .rad-q { color: var(--muted); font-weight: 700; font-size: 0.7rem; }
 
-.radial-hint {
-  text-align: center;
-  font-size: 0.72rem;
-  color: var(--muted);
-  margin: 10px 0 0;
+/* Foto del dueño en la esquina de la bandera */
+.rad-owner {
+  position: absolute;
+  right: -12%; bottom: -12%;
+  width: 48%; height: 48%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--card);
+  box-shadow: 0 0 0 1px var(--line);
+  background: var(--accent-soft);
+  z-index: 2;
 }
+
+/* Perdedor atenuado, ganador resaltado */
+.radial-badge.rad-lost { opacity: 0.4; filter: grayscale(0.6); }
+.radial-badge.rad-won .rad-flag { border-color: var(--green); box-shadow: 0 0 0 1.5px var(--green); }
+
+/* Ganadores que avanzaron (nodos internos) y campeón */
+.rad-node-badge { width: 6.2%; }
+.rad-node-badge .rad-owner { display: none; }
+.rad-champ { width: 14%; z-index: 3; }
+.rad-champ .rad-flag { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 16px rgba(240,178,50,.6); }
+
+/* Perdedor en árbol / tarjetas */
+.bk-team.bk-loser { opacity: 0.5; }
+.bk-team.bk-loser .bk-name { text-decoration: line-through; }
