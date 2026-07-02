@@ -806,7 +806,17 @@ footer {
   display: flex;
   align-items: center;
   position: relative;
-  min-height: 104px;
+  min-height: 114px;
+}
+
+.bk-pens {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: right;
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: 1px dashed var(--line);
 }
 .bk-cell .bk-match { width: 100%; position: relative; }
 
@@ -1470,3 +1480,9 @@ html.dark .scorer-row.scorer-first { background: linear-gradient(90deg, #3a330f,
 /* Perdedor en árbol / tarjetas */
 .bk-team.bk-loser { opacity: 0.5; }
 .bk-team.bk-loser .bk-name { text-decoration: line-through; }
+
+/* Penales en apuestas, empates en marcador, filas clicables del leaderboard */
+.bet-pen { color: var(--muted); font-weight: 600; font-size: 0.82rem; }
+.sb-e { color: var(--gold); font-weight: 700; }
+.lb-row-click { cursor: pointer; transition: background .15s; }
+.lb-row-click:hover { background: var(--accent-soft) !important; }

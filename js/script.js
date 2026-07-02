@@ -128,42 +128,33 @@ function renderPeople() {
 }
 
 /* ---------- Tabla de posiciones (porra) ---------- */
-const POINTS_BY_ROUND = { r32: 2, r16: 4, qf: 7, sf: 11, final: 16, champ: 25 };
+// Puntaje ACUMULATIVO: cada equipo gana los puntos de CADA ronda que alcanza.
+// Incrementos por ronda: 16avos +2, octavos +4, cuartos +7, semis +11,
+// final +16, campeón +25. Acumulado por nivel alcanzado:
+const POINTS_CUM = [0, 2, 6, 13, 24, 40, 65]; // 0=fuera, 1=16avos, ... 6=campeón
+const STAGE_LEVEL = { LAST_32: 1, LAST_16: 2, QUARTER_FINALS: 3, SEMI_FINALS: 4, FINAL: 5 };
+const NEXT_LEVEL = { LAST_32: 2, LAST_16: 3, QUARTER_FINALS: 4, SEMI_FINALS: 5, FINAL: 6 };
 
-// Puntos por la ronda MÁS LEJANA que alcanzó un equipo. Cuenta tanto aparecer
-// en una ronda como GANAR un partido de eliminación (avanza a la siguiente),
-// porque la API a veces tarda en colocar al equipo en la siguiente ronda.
-const STAGE_PTS = {
-  LAST_32: POINTS_BY_ROUND.r32,
-  LAST_16: POINTS_BY_ROUND.r16,
-  QUARTER_FINALS: POINTS_BY_ROUND.qf,
-  SEMI_FINALS: POINTS_BY_ROUND.sf,
-  FINAL: POINTS_BY_ROUND.final,
-};
-const NEXT_PTS = {
-  LAST_32: POINTS_BY_ROUND.r16,
-  LAST_16: POINTS_BY_ROUND.qf,
-  QUARTER_FINALS: POINTS_BY_ROUND.sf,
-  SEMI_FINALS: POINTS_BY_ROUND.final,
-  FINAL: POINTS_BY_ROUND.champ,
-};
-
-function teamRoundPoints(teamEn) {
+// Nivel de ronda más lejano que alcanzó un equipo (aparecer en la ronda o GANAR
+// su partido, porque la API a veces tarda en colocarlo en la siguiente ronda).
+function teamRoundLevel(teamEn) {
   const st = teamStatus[teamEn] || {};
-  if (st.winner) return POINTS_BY_ROUND.champ;
-
-  let best = st.advancing || qualifyingThirds.has(teamEn) ? POINTS_BY_ROUND.r32 : 0;
-
+  if (st.winner) return 6;
+  let level = st.advancing || qualifyingThirds.has(teamEn) ? 1 : 0;
   allMatches.forEach((m) => {
     if (!m.stage || m.stage === "GROUP_STAGE") return;
     const inMatch = m.homeTeam?.name === teamEn || m.awayTeam?.name === teamEn;
-    if (inMatch) best = Math.max(best, STAGE_PTS[m.stage] || 0);
+    if (inMatch) level = Math.max(level, STAGE_LEVEL[m.stage] || 0);
     if (m.status === "FINISHED") {
       const w = knockoutWinnerTeam(m);
-      if (w && w.name === teamEn) best = Math.max(best, NEXT_PTS[m.stage] || 0);
+      if (w && w.name === teamEn) level = Math.max(level, NEXT_LEVEL[m.stage] || 0);
     }
   });
-  return best;
+  return level;
+}
+
+function teamRoundPoints(teamEn) {
+  return POINTS_CUM[teamRoundLevel(teamEn)];
 }
 
 function renderLeaderboard() {
@@ -186,12 +177,12 @@ function renderLeaderboard() {
   host.innerHTML = `
     <div class="lb-card">
       <h3 class="lb-title">🏆 Tabla de posiciones</h3>
-      <p class="lb-note">Cada equipo suma por su ronda más lejana: 16avos 2 · Octavos 4 · Cuartos 7 · Semis 11 · Final 16 · Campeón 25.</p>
+      <p class="lb-note">Cada equipo suma por cada ronda que alcanza: 16avos +2 · Octavos +4 · Cuartos +7 · Semis +11 · Final +16 · Campeón +25 (acumulado: octavos 6, cuartos 13, semis 24, final 40, campeón 65).</p>
       <div class="lb-list">
         ${rows
           .map(
             (r, i) => `
-          <div class="lb-row ${i === 0 && r.score > 0 ? "lb-first" : ""}">
+          <div class="lb-row lb-row-click ${i === 0 && r.score > 0 ? "lb-first" : ""}" data-person="${r.person.name}">
             <span class="lb-pos">${medal(i)}</span>
             <img class="lb-photo" src="images/${r.person.photo}" alt=""
                  onerror="this.outerHTML='<span class=\\'lb-photo-fallback\\'>${initials(r.person.name)}</span>'" />
@@ -203,6 +194,13 @@ function renderLeaderboard() {
           .join("")}
       </div>
     </div>`;
+
+  host.querySelectorAll(".lb-row-click").forEach((row) => {
+    row.addEventListener("click", () => {
+      const person = PEOPLE.find((p) => p.name === row.dataset.person);
+      if (person) openPersonModal(person);
+    });
+  });
 }
 
 /* ---------- Tabla de grupos ---------- */
@@ -1259,17 +1257,42 @@ function bracketSideHtml(team, isWinner, projected, ambiguous, isLoser) {
   return `<div class="bk-team bk-tbd"><span>Por definir</span></div>`;
 }
 
+// Marcador a mostrar separando penales: fullTime en football-data ya trae los
+// penales SUMADOS a los goles, así que usamos regularTime (+extraTime) como
+// marcador real y devolvemos los penales aparte.
+function matchDisplayScore(m) {
+  const sc = m && m.score;
+  if (!sc) return null;
+  if (sc.duration === "PENALTY_SHOOTOUT" && sc.penalties) {
+    const rt = sc.regularTime || sc.fullTime || {};
+    const et = sc.extraTime || {};
+    return {
+      h: (rt.home ?? 0) + (et.home ?? 0),
+      a: (rt.away ?? 0) + (et.away ?? 0),
+      pens: { h: sc.penalties.home, a: sc.penalties.away },
+    };
+  }
+  const ft = sc.fullTime;
+  if (ft && ft.home != null && ft.away != null) return { h: ft.home, a: ft.away, pens: null };
+  return null;
+}
+
 function bracketBoxHtml(match) {
   const m = match.apiMatch;
   const isLive = m && (m.status === "IN_PLAY" || m.status === "PAUSED");
   const dateLabel = m && m.utcDate ? `${formatDate(m.utcDate)} · ${formatTime(m.utcDate)}` : "";
-  const h = m?.score?.fullTime?.home, a = m?.score?.fullTime?.away;
-  const hasScore = h != null && a != null;
-  let aScore = "", bScore = "";
-  if (hasScore && m) {
+  const ds = m ? matchDisplayScore(m) : null;
+  const hasScore = !!ds;
+  let aScore = "", bScore = "", pensLine = "";
+  if (ds && m) {
     const aIsHome = match.a && m.homeTeam?.name === match.a.name;
-    aScore = aIsHome ? h : a;
-    bScore = aIsHome ? a : h;
+    aScore = aIsHome ? ds.h : ds.a;
+    bScore = aIsHome ? ds.a : ds.h;
+    if (ds.pens) {
+      const aPen = aIsHome ? ds.pens.h : ds.pens.a;
+      const bPen = aIsHome ? ds.pens.a : ds.pens.h;
+      pensLine = `<div class="bk-pens">🥅 Penales ${aPen}-${bPen}</div>`;
+    }
   }
   const winName = match.winner && match.winner.name;
   const aWin = !!(winName && match.a && match.a.name === winName);
@@ -1280,6 +1303,7 @@ function bracketBoxHtml(match) {
     ${dateLabel ? `<div class="bk-date">${dateLabel}</div>` : ""}
     <div class="bk-row">${bracketSideHtml(match.a, aWin, match.projA, match.ambigA, aLose)}<span class="bk-score">${hasScore ? aScore : ""}</span></div>
     <div class="bk-row">${bracketSideHtml(match.b, bWin, match.projB, match.ambigB, bLose)}<span class="bk-score">${hasScore ? bScore : ""}</span></div>
+    ${pensLine}
   </div>`;
 }
 
@@ -1751,17 +1775,19 @@ function betResultHtml(bet) {
 
   if (match.status !== "FINISHED") return "";
 
-  const home = match.score?.fullTime?.home;
-  const away = match.score?.fullTime?.away;
-  if (home == null || away == null) return "";
+  const ds = matchDisplayScore(match);
+  if (!ds) return "";
+  const penTxt = ds.pens ? ` <span class="bet-pen">(pen ${ds.pens.h}-${ds.pens.a})</span>` : "";
+  const w = match.score?.winner; // considera penales
 
-  if (home === away) {
-    return `<div class="bet-result bet-result-draw">🤝 Empate ${home}-${away}</div>`;
+  // Empate real (sin penales): la apuesta queda en empate.
+  if (w === "DRAW" || (!ds.pens && ds.h === ds.a)) {
+    return `<div class="bet-result bet-result-draw">🤝 Empate ${ds.h}-${ds.a}</div>`;
   }
 
-  const winnerTeamEn = home > away ? bet.homeTeamEn : bet.awayTeamEn;
+  const winnerTeamEn = w === "HOME_TEAM" ? bet.homeTeamEn : w === "AWAY_TEAM" ? bet.awayTeamEn : ds.h > ds.a ? bet.homeTeamEn : bet.awayTeamEn;
   const winnerOwner = ownerFor(winnerTeamEn);
-  return `<div class="bet-result bet-result-win">🏆 Ganó ${winnerOwner ? winnerOwner.name : esNameFor(winnerTeamEn)} (${home}-${away})</div>`;
+  return `<div class="bet-result bet-result-win">🏆 Ganó ${winnerOwner ? winnerOwner.name : esNameFor(winnerTeamEn)} (${ds.h}-${ds.a})${penTxt}</div>`;
 }
 
 function betMatchupHtml(bet) {
@@ -1922,22 +1948,32 @@ function renderBetsScoreboard(bets) {
   bets = bets || lastBets || [];
 
   const tally = {};
-  const get = (n) => (tally[n] = tally[n] || { won: 0, lost: 0, wonAmt: 0, lostAmt: 0, pending: 0 });
+  const get = (n) => (tally[n] = tally[n] || { won: 0, lost: 0, tie: 0, wonAmt: 0, lostAmt: 0, pending: 0 });
 
   bets.forEach((b) => {
     if (b.status === "rechazada") return;
     const players = [b.fromName, b.targetName].filter(Boolean);
     const match = findMatchByTeams(b.homeTeamEn, b.awayTeamEn);
     const finished = match && match.status === "FINISHED";
-    const home = match?.score?.fullTime?.home;
-    const away = match?.score?.fullTime?.away;
 
-    if (b.status !== "aceptada" || !finished || home == null || away == null || home === away) {
+    // Aún no resuelta (pendiente de aceptar o el partido no ha terminado).
+    if (b.status !== "aceptada" || !finished) {
       players.forEach((n) => get(n).pending++);
       return;
     }
-    const winnerTeam = home > away ? b.homeTeamEn : b.awayTeamEn;
-    const owner = ownerFor(winnerTeam);
+
+    const w = match.score?.winner; // considera penales
+    const ds = matchDisplayScore(match);
+
+    // Empate real (sin penales) → la apuesta queda en empate, ya resuelta.
+    if (w === "DRAW" || (ds && !ds.pens && ds.h === ds.a)) {
+      players.forEach((n) => get(n).tie++);
+      return;
+    }
+
+    const winnerTeam =
+      w === "HOME_TEAM" ? b.homeTeamEn : w === "AWAY_TEAM" ? b.awayTeamEn : ds && ds.h > ds.a ? b.homeTeamEn : ds && ds.a > ds.h ? b.awayTeamEn : null;
+    const owner = winnerTeam ? ownerFor(winnerTeam) : null;
     const wname = owner ? owner.name : null;
     if (!wname || !players.includes(wname)) {
       players.forEach((n) => get(n).pending++);
@@ -1961,13 +1997,13 @@ function renderBetsScoreboard(bets) {
             (r) => `
           <div class="sb-row">
             <span class="sb-name">${r.name}</span>
-            <span class="sb-record"><span class="sb-w">${r.won}G</span> · <span class="sb-l">${r.lost}P</span>${r.pending ? ` · <span class="sb-p">${r.pending} pend.</span>` : ""}</span>
+            <span class="sb-record"><span class="sb-w">${r.won}G</span> · <span class="sb-l">${r.lost}P</span>${r.tie ? ` · <span class="sb-e">${r.tie}E</span>` : ""}${r.pending ? ` · <span class="sb-p">${r.pending} pend.</span>` : ""}</span>
             <span class="sb-net ${r.net > 0 ? "net-pos" : r.net < 0 ? "net-neg" : ""}">${r.net > 0 ? "+" : ""}$${r.net}</span>
           </div>`
           )
           .join("")}
       </div>
-      <p class="lb-note">Saldo de apuestas aceptadas ya jugadas. G = ganadas, P = perdidas.</p>
+      <p class="lb-note">Saldo de apuestas aceptadas ya jugadas. G = ganadas, P = perdidas, E = empates (no cuentan).</p>
     </div>`;
 }
 
